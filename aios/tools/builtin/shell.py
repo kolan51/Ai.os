@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import subprocess
 import sys
 from typing import ClassVar
 
@@ -43,9 +42,7 @@ class ShellMixin:
                 stderr=asyncio.subprocess.PIPE,
                 cwd=cwd,
             )
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(), timeout=self.shell_timeout
-            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=self.shell_timeout)
             return {
                 "exit_code": proc.returncode,
                 "stdout": stdout.decode(errors="replace")[:8000],
@@ -76,21 +73,18 @@ class ShellMixin:
         import tempfile
         from pathlib import Path
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False, encoding="utf-8"
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, encoding="utf-8") as f:
             f.write(code)
             tmp = f.name
 
         try:
             proc = await asyncio.create_subprocess_exec(
-                sys.executable, tmp,
+                sys.executable,
+                tmp,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(), timeout=self.shell_timeout
-            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=self.shell_timeout)
             return {
                 "exit_code": proc.returncode,
                 "stdout": stdout.decode(errors="replace")[:8000],

@@ -47,7 +47,7 @@ def require_key(env_var: str, hint: str = "") -> str:
         if hint:
             lines += ["", f"  {hint}"]
         lines += ["", "  Or export it in your shell:", f"    export {env_var}=your-key-here", ""]
-        raise EnvironmentError("\n".join(lines))
+        raise OSError("\n".join(lines))
     return value
 
 

@@ -77,6 +77,7 @@ class WebSearchMixin:
 def _strip_html(html: str) -> str:
     """Minimal HTML stripper — removes tags, collapses whitespace."""
     import re
+
     text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r"<[^>]+>", " ", text)

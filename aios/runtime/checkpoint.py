@@ -51,19 +51,19 @@ class CheckpointEngine:
                     error TEXT
                 )
             """)
-            await db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_cp_lookup ON checkpoints(agent_id, run_id, tool_name, args_hash)"
-            )
+            await db.execute("CREATE INDEX IF NOT EXISTS idx_cp_lookup ON checkpoints(agent_id, run_id, tool_name, args_hash)")
             await db.commit()
 
     async def start_run(self) -> str:
         """Begin a new run. Returns the run_id."""
         # Check for an interrupted run to resume
         async with aiosqlite.connect(self._db_path) as db:
-            row = await (await db.execute(
-                "SELECT id FROM agent_runs WHERE agent_id = ? AND status = 'running' ORDER BY started_at DESC LIMIT 1",
-                (self._agent_id,),
-            )).fetchone()
+            row = await (
+                await db.execute(
+                    "SELECT id FROM agent_runs WHERE agent_id = ? AND status = 'running' ORDER BY started_at DESC LIMIT 1",
+                    (self._agent_id,),
+                )
+            ).fetchone()
 
             if row:
                 self._run_id = row[0]
@@ -90,10 +90,12 @@ class CheckpointEngine:
         """Return (hit, result). If hit=True, skip tool execution."""
         args_hash = _hash_args(args)
         async with aiosqlite.connect(self._db_path) as db:
-            row = await (await db.execute(
-                "SELECT result FROM checkpoints WHERE agent_id = ? AND run_id = ? AND tool_name = ? AND args_hash = ?",
-                (self._agent_id, self._run_id, tool_name, args_hash),
-            )).fetchone()
+            row = await (
+                await db.execute(
+                    "SELECT result FROM checkpoints WHERE agent_id = ? AND run_id = ? AND tool_name = ? AND args_hash = ?",
+                    (self._agent_id, self._run_id, tool_name, args_hash),
+                )
+            ).fetchone()
             if row:
                 return True, json.loads(row[0])
             return False, None
@@ -119,14 +121,13 @@ class CheckpointEngine:
 
     async def run_history(self, limit: int = 20) -> list[dict]:
         async with aiosqlite.connect(self._db_path) as db:
-            rows = await (await db.execute(
-                "SELECT id, status, started_at, ended_at, error FROM agent_runs WHERE agent_id = ? ORDER BY started_at DESC LIMIT ?",
-                (self._agent_id, limit),
-            )).fetchall()
-            return [
-                {"id": r[0], "status": r[1], "started_at": r[2], "ended_at": r[3], "error": r[4]}
-                for r in rows
-            ]
+            rows = await (
+                await db.execute(
+                    "SELECT id, status, started_at, ended_at, error FROM agent_runs WHERE agent_id = ? ORDER BY started_at DESC LIMIT ?",
+                    (self._agent_id, limit),
+                )
+            ).fetchall()
+            return [{"id": r[0], "status": r[1], "started_at": r[2], "ended_at": r[3], "error": r[4]} for r in rows]
 
     @property
     def run_id(self) -> str:

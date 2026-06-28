@@ -3,8 +3,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Callable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .memory.store import MemoryStore
 
 logger = logging.getLogger("aios.scheduler")
 
@@ -25,10 +29,12 @@ def schedule(interval: str) -> Callable:
             async def run(self):
                 await self.check_services()
     """
+
     def decorator(fn: Callable) -> Callable:
         setattr(fn, _SCHEDULE_MARKER, True)
         setattr(fn, "__aios_interval__", interval)
         return fn
+
     return decorator
 
 
@@ -63,7 +69,7 @@ class Scheduler:
         self._interval = interval_seconds
         self._memory_key = memory_key
 
-    async def run_loop(self, fn: Callable, memory: "MemoryStore") -> None:  # type: ignore[name-defined]
+    async def run_loop(self, fn: Callable, memory: MemoryStore) -> None:  # type: ignore[name-defined]
         while True:
             next_run_str = await memory.load(self._memory_key)
             now = datetime.utcnow()

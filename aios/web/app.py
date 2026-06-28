@@ -6,8 +6,8 @@ from pathlib import Path
 
 import aiosqlite
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, StreamingResponse
 
 from ..runtime.process import ProcessManager as PM
 
@@ -40,9 +40,7 @@ def create_app() -> FastAPI:
             return []
         async with aiosqlite.connect(db_path) as db:
             try:
-                rows = await (await db.execute(
-                    "SELECT key, value, updated_at FROM memory_long ORDER BY updated_at DESC LIMIT 100"
-                )).fetchall()
+                rows = await (await db.execute("SELECT key, value, updated_at FROM memory_long ORDER BY updated_at DESC LIMIT 100")).fetchall()
                 return [{"key": r[0], "value": _preview(r[1]), "updated_at": r[2]} for r in rows]
             except Exception:
                 return []
@@ -54,13 +52,8 @@ def create_app() -> FastAPI:
             return []
         async with aiosqlite.connect(db_path) as db:
             try:
-                rows = await (await db.execute(
-                    "SELECT id, status, started_at, ended_at, error FROM agent_runs ORDER BY started_at DESC LIMIT 20"
-                )).fetchall()
-                return [
-                    {"id": r[0][:8], "status": r[1], "started_at": r[2], "ended_at": r[3], "error": r[4]}
-                    for r in rows
-                ]
+                rows = await (await db.execute("SELECT id, status, started_at, ended_at, error FROM agent_runs ORDER BY started_at DESC LIMIT 20")).fetchall()
+                return [{"id": r[0][:8], "status": r[1], "started_at": r[2], "ended_at": r[3], "error": r[4]} for r in rows]
             except Exception:
                 return []
 
@@ -79,7 +72,7 @@ def create_app() -> FastAPI:
 
         async def generator():
             if not log_path.exists():
-                yield "data: {\"line\": \"No logs yet\"}\n\n"
+                yield 'data: {"line": "No logs yet"}\n\n'
                 return
             with log_path.open("r", errors="replace") as f:
                 f.seek(0, 2)  # seek to end
@@ -107,9 +100,7 @@ async def _count_memory(db_path: Path) -> int:
 async def _last_run(db_path: Path) -> str | None:
     try:
         async with aiosqlite.connect(db_path) as db:
-            row = await (await db.execute(
-                "SELECT started_at, status FROM agent_runs ORDER BY started_at DESC LIMIT 1"
-            )).fetchone()
+            row = await (await db.execute("SELECT started_at, status FROM agent_runs ORDER BY started_at DESC LIMIT 1")).fetchone()
             return f"{row[0][:19]} ({row[1]})" if row else None
     except Exception:
         return None

@@ -40,6 +40,7 @@ class GitHubMixin:
 
     async def _gh_get(self, path: str, params: dict | None = None) -> Any:
         import httpx
+
         url = f"https://api.github.com{path}"
         async with httpx.AsyncClient(timeout=20) as client:
             resp = await client.get(url, headers=self._gh_headers, params=params or {})
@@ -48,6 +49,7 @@ class GitHubMixin:
 
     async def _gh_post(self, path: str, body: dict) -> Any:
         import httpx
+
         url = f"https://api.github.com{path}"
         async with httpx.AsyncClient(timeout=20) as client:
             resp = await client.post(url, headers=self._gh_headers, json=body)
@@ -73,9 +75,7 @@ class GitHubMixin:
         }
 
     @tool
-    async def github_list_issues(
-        self, repo: str, state: str = "open", limit: int = 20
-    ) -> list[dict]:
+    async def github_list_issues(self, repo: str, state: str = "open", limit: int = 20) -> list[dict]:
         """
         List issues for a repository.
         repo: Repository in 'owner/name' format.
@@ -121,9 +121,7 @@ class GitHubMixin:
         }
 
     @tool
-    async def github_create_issue(
-        self, repo: str, title: str, body: str, labels: list | None = None
-    ) -> dict:
+    async def github_create_issue(self, repo: str, title: str, body: str, labels: list | None = None) -> dict:
         """
         Create a new issue on a repository.
         repo: Repository in 'owner/name' format.
@@ -142,9 +140,7 @@ class GitHubMixin:
         }
 
     @tool
-    async def github_list_prs(
-        self, repo: str, state: str = "open", limit: int = 20
-    ) -> list[dict]:
+    async def github_list_prs(self, repo: str, state: str = "open", limit: int = 20) -> list[dict]:
         """
         List pull requests for a repository.
         repo: Repository in 'owner/name' format.
@@ -201,6 +197,7 @@ class GitHubMixin:
         ref: Branch, tag, or commit SHA (default: default branch).
         """
         import base64
+
         params = {"ref": ref} if ref else {}
         data = await self._gh_get(f"/repos/{repo}/contents/{path}", params=params)
         if isinstance(data, list):

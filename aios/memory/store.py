@@ -39,9 +39,7 @@ class MemoryStore:
                     created_at TEXT NOT NULL
                 )
             """)
-            await db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_timeline_agent ON memory_timeline(agent_id)"
-            )
+            await db.execute("CREATE INDEX IF NOT EXISTS idx_timeline_agent ON memory_timeline(agent_id)")
             await db.commit()
 
     # ── Short-term (in-run, cleared on restart) ──────────────────────────────
@@ -71,10 +69,12 @@ class MemoryStore:
 
     async def load(self, key: str, default: Any = None) -> Any:
         async with aiosqlite.connect(self._db_path) as db:
-            row = await (await db.execute(
-                "SELECT value FROM memory_long WHERE agent_id = ? AND key = ?",
-                (self._agent_id, key),
-            )).fetchone()
+            row = await (
+                await db.execute(
+                    "SELECT value FROM memory_long WHERE agent_id = ? AND key = ?",
+                    (self._agent_id, key),
+                )
+            ).fetchone()
             return json.loads(row[0]) if row else default
 
     async def delete(self, key: str) -> None:
@@ -87,18 +87,22 @@ class MemoryStore:
 
     async def keys(self) -> list[str]:
         async with aiosqlite.connect(self._db_path) as db:
-            rows = await (await db.execute(
-                "SELECT key FROM memory_long WHERE agent_id = ? ORDER BY updated_at DESC",
-                (self._agent_id,),
-            )).fetchall()
+            rows = await (
+                await db.execute(
+                    "SELECT key FROM memory_long WHERE agent_id = ? ORDER BY updated_at DESC",
+                    (self._agent_id,),
+                )
+            ).fetchall()
             return [r[0] for r in rows]
 
     async def all(self) -> dict[str, Any]:
         async with aiosqlite.connect(self._db_path) as db:
-            rows = await (await db.execute(
-                "SELECT key, value FROM memory_long WHERE agent_id = ?",
-                (self._agent_id,),
-            )).fetchall()
+            rows = await (
+                await db.execute(
+                    "SELECT key, value FROM memory_long WHERE agent_id = ?",
+                    (self._agent_id,),
+                )
+            ).fetchall()
             return {r[0]: json.loads(r[1]) for r in rows}
 
     # ── Timeline (append-only event log) ────────────────────────────────────
@@ -113,8 +117,10 @@ class MemoryStore:
 
     async def timeline(self, limit: int = 100) -> list[dict]:
         async with aiosqlite.connect(self._db_path) as db:
-            rows = await (await db.execute(
-                "SELECT event, data, created_at FROM memory_timeline WHERE agent_id = ? ORDER BY created_at DESC LIMIT ?",
-                (self._agent_id, limit),
-            )).fetchall()
+            rows = await (
+                await db.execute(
+                    "SELECT event, data, created_at FROM memory_timeline WHERE agent_id = ? ORDER BY created_at DESC LIMIT ?",
+                    (self._agent_id, limit),
+                )
+            ).fetchall()
             return [{"event": r[0], "data": json.loads(r[1]), "at": r[2]} for r in rows]

@@ -15,7 +15,7 @@ from .memory.store import MemoryStore
 from .models.router import ModelRouter
 from .runtime.checkpoint import CheckpointEngine
 from .runtime.process import AIOS_DIR
-from .scheduling import Scheduler, _SCHEDULE_MARKER, parse_interval
+from .scheduling import _SCHEDULE_MARKER, Scheduler, parse_interval
 from .tools.registry import ToolRegistry
 
 logger = logging.getLogger("aios")
@@ -127,7 +127,7 @@ class Agent:
 
     # ── Agent-to-agent ────────────────────────────────────────────────────────
 
-    async def call_agent(self, agent_class: "type[Agent]", prompt: str) -> str:
+    async def call_agent(self, agent_class: type[Agent], prompt: str) -> str:
         """
         Instantiate another agent class and ask it a single question.
         The child agent shares this agent's memory scope for read access.
@@ -144,7 +144,7 @@ class Agent:
         logger.info("[%s] agent %s returned %d chars", self.name, agent_class.name, len(response))
         return response
 
-    async def spawn_agent(self, agent_class: "type[Agent]") -> None:
+    async def spawn_agent(self, agent_class: type[Agent]) -> None:
         """
         Run another agent's full lifecycle in the background (fire-and-forget).
         The child runs independently with its own memory and checkpoint scope.
@@ -187,18 +187,20 @@ class Agent:
                 return resp.content
 
             # Append assistant turn with tool calls
-            messages.append({
-                "role": "assistant",
-                "content": resp.content,
-                "tool_calls": [
-                    {
-                        "id": tc["id"],
-                        "type": "function",
-                        "function": {"name": tc["name"], "arguments": tc["arguments"]},
-                    }
-                    for tc in resp.tool_calls
-                ],
-            })
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": resp.content,
+                    "tool_calls": [
+                        {
+                            "id": tc["id"],
+                            "type": "function",
+                            "function": {"name": tc["name"], "arguments": tc["arguments"]},
+                        }
+                        for tc in resp.tool_calls
+                    ],
+                }
+            )
 
             # Execute tool calls (checkpointing happens inside the wrapped methods)
             for tc in resp.tool_calls:
@@ -208,11 +210,13 @@ class Agent:
                     result = f"Error: {exc}"
                     logger.warning("tool %s failed: %s", tc["name"], exc)
 
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tc["id"],
-                    "content": json.dumps(result, default=str),
-                })
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tc["id"],
+                        "content": json.dumps(result, default=str),
+                    }
+                )
 
         return "Max tool-call iterations reached."
 
@@ -266,6 +270,7 @@ class Agent:
         load_env()
         validate_model_key(cls.model)
         import os
+
         log_level = os.environ.get("AIOS_LOG_LEVEL", "INFO").upper()
         logging.basicConfig(
             level=getattr(logging, log_level, logging.INFO),

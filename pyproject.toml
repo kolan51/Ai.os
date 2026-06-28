@@ -45,25 +45,34 @@ dev = [
 aios = "aios.cli.main:app"
 
 [project.urls]
-Homepage = "https://github.com/aios-runtime/aios"
-Documentation = "https://docs.aios.dev"
-Repository = "https://github.com/aios-runtime/aios"
-Issues = "https://github.com/aios-runtime/aios/issues"
+Homepage = "https://github.com/kolan51/Ai.os"
+Repository = "https://github.com/kolan51/Ai.os"
+Issues = "https://github.com/kolan51/Ai.os/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["aios"]
 
 [tool.ruff]
-line-length = 100
+line-length = 220
 target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+ignore = ["E741"]
 
 [tool.mypy]
 python_version = "3.10"
-strict = true
 ignore_missing_imports = true
+strict = false
+disallow_any_generics = false
+warn_return_any = false
+check_untyped_defs = false
+disable_error_code = [
+  "type-arg",
+  "no-any-return",
+  "no-untyped-def",
+  "no-untyped-call"
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

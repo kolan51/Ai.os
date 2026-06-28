@@ -38,19 +38,19 @@ if __name__ == "__main__":
     {class_name}.launch()
 '''
 
-ENV_TEMPLATE = '''\
+ENV_TEMPLATE = """\
 # {agent_name} — environment variables
 # See .env.example for all options
 
 ANTHROPIC_API_KEY=your-key-here
 # OPENAI_API_KEY=
 # GOOGLE_API_KEY=
-'''
+"""
 
-GITIGNORE_TEMPLATE = '''\
+GITIGNORE_TEMPLATE = """\
 __pycache__/
 *.pyc
 .env
 .aios/
 *.db
-'''
+"""

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from ..registry import tool
@@ -21,10 +20,7 @@ class FilesystemMixin:
         if not self.allow_absolute:
             cwd = Path.cwd().resolve()
             if not str(resolved).startswith(str(cwd)):
-                raise PermissionError(
-                    f"Path escapes working directory: {resolved}\n"
-                    "Set allow_absolute = True on your agent to allow absolute paths."
-                )
+                raise PermissionError(f"Path escapes working directory: {resolved}\nSet allow_absolute = True on your agent to allow absolute paths.")
         return resolved
 
     @tool

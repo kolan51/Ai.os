@@ -56,10 +56,12 @@ async def load_identity(
         """)
         await db.commit()
 
-        row = await (await db.execute(
-            "SELECT id, name, version, model, created_at, config, tags FROM agent_identity WHERE name = ?",
-            (name,),
-        )).fetchone()
+        row = await (
+            await db.execute(
+                "SELECT id, name, version, model, created_at, config, tags FROM agent_identity WHERE name = ?",
+                (name,),
+            )
+        ).fetchone()
 
         if row:
             identity = AgentIdentity(

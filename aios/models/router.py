@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import json
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Any, AsyncIterator
+from typing import Any
 
 
 @dataclass
@@ -54,11 +54,13 @@ class ModelRouter:
         tool_calls = []
         if hasattr(message, "tool_calls") and message.tool_calls:
             for tc in message.tool_calls:
-                tool_calls.append({
-                    "id": tc.id,
-                    "name": tc.function.name,
-                    "arguments": tc.function.arguments,
-                })
+                tool_calls.append(
+                    {
+                        "id": tc.id,
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    }
+                )
 
         return ModelResponse(
             content=message.content or "",

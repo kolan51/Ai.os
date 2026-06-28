@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 AIOS_DIR = Path.home() / ".aios"
 PIDS_DIR = AIOS_DIR / "pids"
 LOGS_DIR = AIOS_DIR / "logs"
@@ -36,9 +35,7 @@ def spawn(agent_file: Path, agent_name: str) -> int:
         stderr=log,
         start_new_session=True,
     )
-    pid_file(agent_name).write_text(
-        json.dumps({"pid": proc.pid, "file": str(agent_file), "name": agent_name})
-    )
+    pid_file(agent_name).write_text(json.dumps({"pid": proc.pid, "file": str(agent_file), "name": agent_name}))
     return proc.pid
 
 
@@ -87,6 +84,7 @@ def list_agents() -> list[dict[str, Any]]:
 
 class ProcessManager:
     """Namespace for process management utilities."""
+
     spawn = staticmethod(spawn)
     stop = staticmethod(stop)
     is_running = staticmethod(is_running)

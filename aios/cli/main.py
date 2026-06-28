@@ -31,6 +31,7 @@ def _dot(running: bool) -> Text:
 
 # ── run ───────────────────────────────────────────────────────────────────────
 
+
 @app.command()
 def run(
     agent_file: Path = typer.Argument(..., help="Path to the agent Python file"),
@@ -48,10 +49,7 @@ def run(
         pid = PM.spawn(agent_file.resolve(), agent_name)
         console.print(
             Panel(
-                f"[green]Agent started[/green]\n\n"
-                f"  name  [dim]→[/dim]  [bold]{agent_name}[/bold]\n"
-                f"  pid   [dim]→[/dim]  {pid}\n"
-                f"  logs  [dim]→[/dim]  [dim]aios logs {agent_name} -f[/dim]",
+                f"[green]Agent started[/green]\n\n  name  [dim]→[/dim]  [bold]{agent_name}[/bold]\n  pid   [dim]→[/dim]  {pid}\n  logs  [dim]→[/dim]  [dim]aios logs {agent_name} -f[/dim]",
                 title="[bold]Ai.os[/bold]",
                 border_style="dim",
                 padding=(0, 1),
@@ -77,16 +75,14 @@ def _run_blocking(agent_file: Path) -> None:
 
 # ── list ──────────────────────────────────────────────────────────────────────
 
+
 @app.command(name="list")
 def list_agents() -> None:
     """List all known agents and their status."""
     agents = PM.list_agents()
 
     if not agents:
-        console.print(
-            "[dim]No agents found.[/dim]\n"
-            "  Start one: [bold]aios run myagent.py --detach[/bold]"
-        )
+        console.print("[dim]No agents found.[/dim]\n  Start one: [bold]aios run myagent.py --detach[/bold]")
         return
 
     table = Table(box=box.SIMPLE, show_header=True, header_style="bold dim", padding=(0, 1))
@@ -111,6 +107,7 @@ def list_agents() -> None:
 
 # ── status ────────────────────────────────────────────────────────────────────
 
+
 @app.command()
 def status(agent_name: str = typer.Argument(..., help="Agent name")) -> None:
     """Show agent status, identity, and recent runs."""
@@ -121,19 +118,21 @@ def status(agent_name: str = typer.Argument(..., help="Agent name")) -> None:
     run_history: list[dict] = []
 
     if db_path.exists():
+
         async def _fetch() -> list[dict]:
-            from ..runtime.checkpoint import CheckpointEngine
-            engine = CheckpointEngine(agent_id="", db_path=db_path)
+            # from ..runtime.checkpoint import CheckpointEngine
+
+            # engine = CheckpointEngine(agent_id="", db_path=db_path)
             # Read directly without needing agent_id
             import aiosqlite
+
             async with aiosqlite.connect(db_path) as db:
                 try:
-                    rows = await (await db.execute(
-                        "SELECT id, status, started_at, ended_at FROM agent_runs ORDER BY started_at DESC LIMIT 5"
-                    )).fetchall()
+                    rows = await (await db.execute("SELECT id, status, started_at, ended_at FROM agent_runs ORDER BY started_at DESC LIMIT 5")).fetchall()
                     return [{"id": r[0][:8], "status": r[1], "started": r[2][:19], "ended": (r[3] or "")[:19]} for r in rows]
                 except Exception:
                     return []
+
         run_history = asyncio.run(_fetch())
 
     dot = _dot(running)
@@ -158,6 +157,7 @@ def status(agent_name: str = typer.Argument(..., help="Agent name")) -> None:
 
 
 # ── logs ──────────────────────────────────────────────────────────────────────
+
 
 @app.command()
 def logs(
@@ -203,6 +203,7 @@ def _tail_follow(path: Path, initial_lines: int) -> None:
 
 # ── stop ──────────────────────────────────────────────────────────────────────
 
+
 @app.command()
 def stop(agent_name: str = typer.Argument(..., help="Agent name")) -> None:
     """Stop a running agent."""
@@ -213,6 +214,7 @@ def stop(agent_name: str = typer.Argument(..., help="Agent name")) -> None:
 
 
 # ── restart ───────────────────────────────────────────────────────────────────
+
 
 @app.command()
 def restart(agent_name: str = typer.Argument(..., help="Agent name")) -> None:
@@ -227,13 +229,14 @@ def restart(agent_name: str = typer.Argument(..., help="Agent name")) -> None:
     if info and info.get("file"):
         pid = PM.spawn(Path(info["file"]), agent_name)
         console.print(f"[green]Restarted[/green] [bold]{agent_name}[/bold]  [dim](pid {pid})[/dim]")
-        console.print(f"  [dim]Agent will resume from last checkpoint[/dim]")
+        console.print("  [dim]Agent will resume from last checkpoint[/dim]")
     else:
         console.print(f"[red]Cannot restart[/red] [bold]{agent_name}[/bold] — no file info found")
-        console.print(f"  Run it manually: [bold]aios run <file> --detach[/bold]")
+        console.print("  Run it manually: [bold]aios run <file> --detach[/bold]")
 
 
 # ── memory ────────────────────────────────────────────────────────────────────
+
 
 @app.command()
 def memory(
@@ -250,17 +253,18 @@ def memory(
 
     async def _fetch() -> list[tuple[str, str, str]]:
         import aiosqlite
+
         async with aiosqlite.connect(db_path) as db:
             try:
                 if key:
-                    rows = await (await db.execute(
-                        "SELECT key, value, updated_at FROM memory_long WHERE key = ? ORDER BY updated_at DESC",
-                        (key,),
-                    )).fetchall()
+                    rows = await (
+                        await db.execute(
+                            "SELECT key, value, updated_at FROM memory_long WHERE key = ? ORDER BY updated_at DESC",
+                            (key,),
+                        )
+                    ).fetchall()
                 else:
-                    rows = await (await db.execute(
-                        "SELECT key, value, updated_at FROM memory_long ORDER BY updated_at DESC"
-                    )).fetchall()
+                    rows = await (await db.execute("SELECT key, value, updated_at FROM memory_long ORDER BY updated_at DESC")).fetchall()
                 return [(r[0], r[1], r[2]) for r in rows]
             except Exception:
                 return []
@@ -299,12 +303,13 @@ def memory(
 
 # ── doctor ───────────────────────────────────────────────────────────────────
 
+
 @app.command()
 def doctor() -> None:
     """Check your Ai.os environment for common issues."""
-    import sys
-    import os
     import importlib
+    import os
+    import sys
 
     console.print(f"\n[bold]Ai.os Doctor[/bold]  [dim]v{_get_version()}[/dim]\n")
 
@@ -384,10 +389,7 @@ def doctor() -> None:
         )
 
     if not any_key:
-        console.print(
-            "\n  [yellow]No API keys found.[/yellow] Add at least one to .env:\n"
-            "    ANTHROPIC_API_KEY=your-key-here\n"
-        )
+        console.print("\n  [yellow]No API keys found.[/yellow] Add at least one to .env:\n    ANTHROPIC_API_KEY=your-key-here\n")
 
     # Dot env file
     console.print()
@@ -401,14 +403,13 @@ def doctor() -> None:
     elif fail_count == 0:
         console.print(f"  [yellow]{warn_count} warning(s)[/yellow] — optional items missing.\n")
     else:
-        console.print(
-            f"  [red]{fail_count} error(s)[/red], {warn_count} warning(s) — fix errors before running agents.\n"
-        )
+        console.print(f"  [red]{fail_count} error(s)[/red], {warn_count} warning(s) — fix errors before running agents.\n")
 
 
 def _get_version() -> str:
     try:
         from .. import __version__
+
         return __version__
     except Exception:
         return "unknown"
@@ -416,14 +417,15 @@ def _get_version() -> str:
 
 # ── ui ────────────────────────────────────────────────────────────────────────
 
+
 @app.command()
 def ui(
     host: str = typer.Option("127.0.0.1", help="Host to bind"),
     port: int = typer.Option(7851, help="Port to bind"),
 ) -> None:
     """Open the web UI dashboard."""
-    import webbrowser
     import threading
+    import webbrowser
 
     def _open() -> None:
         time.sleep(1.2)
@@ -433,11 +435,14 @@ def ui(
     console.print(f"[bold]Ai.os UI[/bold] → [link=http://{host}:{port}]http://{host}:{port}[/link]")
 
     import uvicorn
+
     from ..web.app import create_app
+
     uvicorn.run(create_app(), host=host, port=port, log_level="warning")
 
 
 # ── init ─────────────────────────────────────────────────────────────────────
+
 
 @app.command()
 def init(
@@ -479,9 +484,7 @@ def init(
 
     console.print(
         Panel(
-            f"[green]Agent scaffolded[/green]\n\n"
-            + "\n".join(f"  [dim]created[/dim]  {f}" for f in files_written)
-            + f"\n\n[dim]Next steps:[/dim]\n"
+            "[green]Agent scaffolded[/green]\n\n" + "\n".join(f"  [dim]created[/dim]  {f}" for f in files_written) + f"\n\n[dim]Next steps:[/dim]\n"
             f"  1. Add your API key to [bold]{target}/.env[/bold]\n"
             f"  2. Edit [bold]{agent_file.name}[/bold] — implement run() and add @tool methods\n"
             f"  3. Run it: [bold]aios run {agent_file}[/bold]",
@@ -494,10 +497,12 @@ def init(
 
 # ── version ───────────────────────────────────────────────────────────────────
 
+
 @app.command()
 def version() -> None:
     """Show Ai.os version."""
     from .. import __version__
+
     console.print(f"[bold]Ai.os[/bold]  [dim]v{__version__}[/dim]")
 
 
