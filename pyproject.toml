@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aios-runtime"
+version = "0.1.0"
+description = "Persistent agent runtime. Deploy agents that remember, survive crashes, and run forever."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["ai", "agents", "llm", "autonomous", "runtime", "persistence"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+  "litellm>=1.40.0",
+  "typer>=0.12.0",
+  "rich>=13.7.0",
+  "aiosqlite>=0.20.0",
+  "fastapi>=0.111.0",
+  "uvicorn[standard]>=0.30.0",
+  "pydantic>=2.7.0",
+  "watchfiles>=0.22.0",
+  "httpx>=0.27.0",
+  "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-asyncio>=0.23.0",
+  "ruff>=0.4.0",
+  "mypy>=1.10.0",
+]
+
+[project.scripts]
+aios = "aios.cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/aios-runtime/aios"
+Documentation = "https://docs.aios.dev"
+Repository = "https://github.com/aios-runtime/aios"
+Issues = "https://github.com/aios-runtime/aios/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["aios"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
