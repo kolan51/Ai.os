@@ -50,7 +50,7 @@ aios = "aios.cli.main:app"
 
 [project.urls]
 Documentation = "https://github.com/kolan51/Ai.os#readme"
-Homepage = "https://github.com/kolan51/Ai.os"
+Homepage = "https://ai-ro4u22auu-kolan51s-projects.vercel.app"
 Repository = "https://github.com/kolan51/Ai.os"
 Issues = "https://github.com/kolan51/Ai.os/issues"
 Source = "https://github.com/kolan51/Ai.os"
