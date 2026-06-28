@@ -21,7 +21,6 @@ import os
 import stat
 import sys
 from pathlib import Path
-from typing import Optional
 
 # The directory for Ai.os runtime data in the user's home directory.
 # All secrets live here — NOT in the project directory.
@@ -36,10 +35,7 @@ def _require_cryptography() -> None:
     try:
         import cryptography  # noqa: F401
     except ImportError:
-        raise ImportError(
-            "The 'cryptography' package is required for secrets management.\n"
-            "Install it with:  pip install cryptography"
-        )
+        raise ImportError("The 'cryptography' package is required for secrets management.\nInstall it with:  pip install cryptography")
 
 
 def _get_fernet(master_key: bytes):  # type: ignore[return]
@@ -84,7 +80,7 @@ class SecretsStore:
         Defaults to ``~/.aios``.  Useful in tests (monkeypatch home dir).
     """
 
-    def __init__(self, aios_dir: Optional[Path] = None) -> None:
+    def __init__(self, aios_dir: Path | None = None) -> None:
         _require_cryptography()
         self._aios_dir: Path = aios_dir or _AIOS_HOME
         self._db_path: Path = self._aios_dir / _SECRETS_DB_FILE
@@ -124,21 +120,18 @@ class SecretsStore:
         ciphertext = self._encrypt(value)
         async with aiosqlite.connect(self._db_path) as db:
             await db.execute(
-                "INSERT INTO secrets (name, value) VALUES (?, ?)"
-                " ON CONFLICT(name) DO UPDATE SET value = excluded.value",
+                "INSERT INTO secrets (name, value) VALUES (?, ?) ON CONFLICT(name) DO UPDATE SET value = excluded.value",
                 (name, ciphertext),
             )
             await db.commit()
 
-    async def get(self, name: str, default: Optional[str] = None) -> Optional[str]:
+    async def get(self, name: str, default: str | None = None) -> str | None:
         """Return the decrypted value for *name*, or *default* if not found."""
         await self._setup()
         import aiosqlite
 
         async with aiosqlite.connect(self._db_path) as db:
-            row = await (
-                await db.execute("SELECT value FROM secrets WHERE name = ?", (name,))
-            ).fetchone()
+            row = await (await db.execute("SELECT value FROM secrets WHERE name = ?", (name,))).fetchone()
 
         if row is None:
             return default
@@ -159,9 +152,7 @@ class SecretsStore:
         import aiosqlite
 
         async with aiosqlite.connect(self._db_path) as db:
-            rows = await (
-                await db.execute("SELECT name FROM secrets ORDER BY name")
-            ).fetchall()
+            rows = await (await db.execute("SELECT name FROM secrets ORDER BY name")).fetchall()
         return [r[0] for r in rows]
 
     async def inject_to_env(self) -> None:

@@ -210,14 +210,16 @@ def runs(
 
     async def _fetch():
         import aiosqlite
+
         async with aiosqlite.connect(db_path) as db:
             try:
                 where = "WHERE status = 'failed'" if failed else ""
-                rows = await (await db.execute(
-                    f"SELECT id, status, started_at, ended_at, total_tokens, llm_calls, error "
-                    f"FROM agent_runs {where} ORDER BY started_at DESC LIMIT ?",
-                    (limit,),
-                )).fetchall()
+                rows = await (
+                    await db.execute(
+                        f"SELECT id, status, started_at, ended_at, total_tokens, llm_calls, error FROM agent_runs {where} ORDER BY started_at DESC LIMIT ?",
+                        (limit,),
+                    )
+                ).fetchall()
                 return rows
             except Exception:
                 return []
@@ -252,6 +254,7 @@ def runs(
         if started_at and ended_at:
             try:
                 from datetime import datetime
+
                 fmt = "%Y-%m-%d %H:%M:%S"
                 s = datetime.strptime(started_at[:19], fmt)
                 e = datetime.strptime(ended_at[:19], fmt)
@@ -309,20 +312,23 @@ def timeline(
 
     async def _fetch():
         import aiosqlite
+
         async with aiosqlite.connect(db_path) as db:
             try:
                 if event_type:
-                    rows = await (await db.execute(
-                        "SELECT event_type, data, created_at FROM memory_timeline "
-                        "WHERE event_type = ? ORDER BY created_at DESC LIMIT ?",
-                        (event_type, limit),
-                    )).fetchall()
+                    rows = await (
+                        await db.execute(
+                            "SELECT event_type, data, created_at FROM memory_timeline WHERE event_type = ? ORDER BY created_at DESC LIMIT ?",
+                            (event_type, limit),
+                        )
+                    ).fetchall()
                 else:
-                    rows = await (await db.execute(
-                        "SELECT event_type, data, created_at FROM memory_timeline "
-                        "ORDER BY created_at DESC LIMIT ?",
-                        (limit,),
-                    )).fetchall()
+                    rows = await (
+                        await db.execute(
+                            "SELECT event_type, data, created_at FROM memory_timeline ORDER BY created_at DESC LIMIT ?",
+                            (limit,),
+                        )
+                    ).fetchall()
                 return rows
             except Exception:
                 return []
@@ -478,9 +484,11 @@ def cp(
 
     async def _fixup() -> None:
         import aiosqlite
+
         async with aiosqlite.connect(dst_db) as db:
             # Give the clone a new identity UUID
             import uuid
+
             new_id = str(uuid.uuid4())
             try:
                 await db.execute("UPDATE identity SET id = ?, name = ? WHERE 1", (new_id, dest))
@@ -555,10 +563,10 @@ def memory(
 
         async def _set() -> None:
             import aiosqlite
+
             async with aiosqlite.connect(db_path) as db:
                 await db.execute(
-                    "INSERT INTO memory_long (key, value, updated_at) VALUES (?, ?, datetime('now'))"
-                    " ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+                    "INSERT INTO memory_long (key, value, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
                     (key, raw),
                 )
                 await db.commit()
@@ -574,6 +582,7 @@ def memory(
 
         async def _del() -> int:
             import aiosqlite
+
             async with aiosqlite.connect(db_path) as db:
                 cur = await db.execute("DELETE FROM memory_long WHERE key = ?", (key,))
                 await db.commit()
@@ -693,7 +702,7 @@ def doctor() -> None:
     # Optional packages
     optional_pkgs = [
         ("watchfiles", "aios run --watch"),
-        ("asyncpg", "PostgresMixin  · pip install \"aios-runtime[postgres]\""),
+        ("asyncpg", 'PostgresMixin  · pip install "aios-runtime[postgres]"'),
         ("uvicorn", "aios mcp (HTTP/SSE transport)"),
         ("websockets", "aios logs --remote"),
     ]
@@ -815,8 +824,9 @@ def bus_publish(
     ttl: int = typer.Option(86_400, "--ttl", help="Time-to-live in seconds (0 = forever)"),
 ) -> None:
     """Publish a message to a bus topic."""
-    from ..bus.store import MessageBus
     import json as _json
+
+    from ..bus.store import MessageBus
 
     try:
         data = _json.loads(payload)
@@ -867,8 +877,9 @@ def bus_read(
     follow: bool = typer.Option(False, "--follow", "-f", help="Poll for new messages (Ctrl-C to stop)"),
 ) -> None:
     """Read recent messages from a bus topic."""
-    from ..bus.store import MessageBus
     import json as _json
+
+    from ..bus.store import MessageBus
 
     async def _read():
         bus = MessageBus()
@@ -948,6 +959,7 @@ def _secrets_store():
     """Return a SecretsStore or exit with a clear error if cryptography is missing."""
     try:
         from ..secrets import SecretsStore
+
         return SecretsStore()
     except ImportError:
         console.print("[red]Install cryptography:[/red] pip install cryptography")
@@ -1103,9 +1115,7 @@ def init(
 
     console.print(
         Panel(
-            f"[green]Agent scaffolded[/green]  [dim](template: {template})[/dim]\n\n"
-            + "\n".join(f"  [dim]created[/dim]  {f}" for f in files_written)
-            + f"\n\n[dim]Next steps:[/dim]\n"
+            f"[green]Agent scaffolded[/green]  [dim](template: {template})[/dim]\n\n" + "\n".join(f"  [dim]created[/dim]  {f}" for f in files_written) + f"\n\n[dim]Next steps:[/dim]\n"
             f"  1. Add your API key to [bold]{target}/.env[/bold]\n"
             f"  2. Edit [bold]{agent_file.name}[/bold] — customise run() and @tool methods\n"
             f"  3. Run it: [bold]aios run {agent_file}[/bold]",
@@ -1177,6 +1187,7 @@ def export(
 
 def _safe_json(raw: str) -> object:
     import json
+
     try:
         return json.loads(raw)
     except Exception:
@@ -1219,8 +1230,9 @@ def import_memory(
     db_path = PM.AIOS_DIR / "data" / f"{agent_name}.db"
 
     async def _load() -> int:
-        import aiosqlite
         from datetime import datetime
+
+        import aiosqlite
 
         db_path.parent.mkdir(parents=True, exist_ok=True)
         imported = 0
@@ -1239,8 +1251,7 @@ def import_memory(
                 raw_value = entry["value"] if isinstance(entry, dict) and "value" in entry else entry
                 updated_at = entry.get("updated_at", datetime.utcnow().isoformat()) if isinstance(entry, dict) else datetime.utcnow().isoformat()
                 await db.execute(
-                    "INSERT INTO memory_long (agent_id, key, value, updated_at) VALUES (?, ?, ?, ?) "
-                    "ON CONFLICT(agent_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+                    "INSERT INTO memory_long (agent_id, key, value, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(agent_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
                     (agent_name, key, json.dumps(raw_value), updated_at),
                 )
                 imported += 1
@@ -1252,10 +1263,7 @@ def import_memory(
     mode = "merged into" if merge else "replaced"
     console.print(
         Panel(
-            f"[green]Memory imported[/green]\n\n"
-            f"  agent    [dim]→[/dim]  [bold]{agent_name}[/bold]\n"
-            f"  keys     [dim]→[/dim]  {count} ({mode} existing memory)\n"
-            f"  source   [dim]→[/dim]  [dim]{source}[/dim]",
+            f"[green]Memory imported[/green]\n\n  agent    [dim]→[/dim]  [bold]{agent_name}[/bold]\n  keys     [dim]→[/dim]  {count} ({mode} existing memory)\n  source   [dim]→[/dim]  [dim]{source}[/dim]",
             title="[bold]aios import[/bold]",
             border_style="dim",
             padding=(0, 1),
@@ -1271,12 +1279,14 @@ def test_agent(
     agent_file: Path = typer.Argument(..., help="Agent Python file to dry-run"),
     mock_response: str = typer.Option(
         "This is a mock LLM response from aios test.",
-        "--mock", "-m",
+        "--mock",
+        "-m",
         help="Text to return from every think() / think_with_tools() call",
     ),
     payload: str = typer.Option(
         "{}",
-        "--payload", "-p",
+        "--payload",
+        "-p",
         help="JSON payload to pass to webhook-triggered agents",
     ),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress agent logs"),
@@ -1298,7 +1308,7 @@ def test_agent(
     import json as _json
     import logging
     import traceback
-    from unittest.mock import AsyncMock, patch
+    from unittest.mock import patch
 
     if not agent_file.exists():
         console.print(f"[red]File not found:[/red] {agent_file}")
@@ -1331,6 +1341,7 @@ def test_agent(
 
     async def _recording_call(registry_self, name: str, arguments) -> object:
         import json as _j
+
         args = _j.loads(arguments) if isinstance(arguments, str) else arguments
         tool_calls.append({"tool": name, "args": args})
         return await _orig_call(registry_self, name, arguments)
@@ -1355,10 +1366,7 @@ def test_agent(
             from aios import Agent as _Agent
             from aios.triggers import _TRIGGER_MARKER
 
-            agent_classes = [
-                v for v in vars(mod).values()
-                if isinstance(v, type) and issubclass(v, _Agent) and v is not _Agent
-            ]
+            agent_classes = [v for v in vars(mod).values() if isinstance(v, type) and issubclass(v, _Agent) and v is not _Agent]
 
             if not agent_classes:
                 console.print("[red]No Agent subclass found in file.[/red]")
@@ -1366,29 +1374,30 @@ def test_agent(
 
             for cls in agent_classes:
                 from aios.config import load_env
+
                 load_env()
 
                 instance = cls()
                 asyncio.run(instance._bootstrap())
 
                 from aios.tools.registry import ToolRegistry
+
                 _orig_call = ToolRegistry.call.__wrapped__ if hasattr(ToolRegistry.call, "__wrapped__") else ToolRegistry.call
 
                 run_method = cls.run
-                is_webhook = getattr(run_method, _TRIGGER_MARKER, False) and \
-                             getattr(run_method, "__aios_trigger_kind__", "") == "webhook"
+                is_webhook = getattr(run_method, _TRIGGER_MARKER, False) and getattr(run_method, "__aios_trigger_kind__", "") == "webhook"
 
                 try:
                     if is_webhook:
                         asyncio.run(instance.run(payload_dict))
                     else:
                         asyncio.run(instance.run())
-                except Exception as exc:
+                except Exception:
                     error_msg = traceback.format_exc()
 
     except SystemExit:
         pass
-    except Exception as exc:
+    except Exception:
         error_msg = traceback.format_exc()
 
     # ── Report ────────────────────────────────────────────────────────────────
@@ -1409,7 +1418,7 @@ def test_agent(
         for i, p in enumerate(think_calls[:5], 1):
             console.print(f"  [dim]{i}.[/dim] {p}…" if len(p) == 120 else f"  [dim]{i}.[/dim] {p}")
         if len(think_calls) > 5:
-            console.print(f"  [dim]… and {len(think_calls)-5} more[/dim]")
+            console.print(f"  [dim]… and {len(think_calls) - 5} more[/dim]")
 
     if tool_calls:
         console.print("[dim]── Tool calls ────────────────────────────────[/dim]")
@@ -1442,10 +1451,9 @@ def test_agent(
                 current = _file_hash(agent_file)
                 if current != last_hash:
                     last_hash = current
-                    console.print(f"\n[dim]── File changed, re-running… ──────────────────[/dim]\n")
+                    console.print("\n[dim]── File changed, re-running… ──────────────────[/dim]\n")
                     # Re-invoke this command by running ourselves as a subprocess
-                    args = [sys.executable, "-m", "aios", "test", str(agent_file),
-                            "--mock", mock_response, "--payload", payload]
+                    args = [sys.executable, "-m", "aios", "test", str(agent_file), "--mock", mock_response, "--payload", payload]
                     if quiet:
                         args.append("--quiet")
                     subprocess.run(args)
@@ -1463,13 +1471,12 @@ _COST_OUTPUT_PER_M = 15.00
 
 def _estimate_cost(prompt_tokens: int, completion_tokens: int) -> float:
     """Estimate USD cost from token counts."""
-    return (prompt_tokens / 1_000_000) * _COST_INPUT_PER_M + \
-           (completion_tokens / 1_000_000) * _COST_OUTPUT_PER_M
+    return (prompt_tokens / 1_000_000) * _COST_INPUT_PER_M + (completion_tokens / 1_000_000) * _COST_OUTPUT_PER_M
 
 
 def _fmt_cost(usd: float) -> str:
     if usd < 0.001:
-        return f"${usd*100:.4f}¢"
+        return f"${usd * 100:.4f}¢"
     if usd < 1.0:
         return f"${usd:.4f}"
     return f"${usd:.2f}"
@@ -1491,23 +1498,28 @@ def stats(
             row: dict = {
                 "name": name,
                 "running": a.get("running", False),
-                "total": 0, "completed": 0, "failed": 0,
-                "avg_dur": None, "last_run": None,
+                "total": 0,
+                "completed": 0,
+                "failed": 0,
+                "avg_dur": None,
+                "last_run": None,
                 "memory_keys": 0,
-                "total_tokens": 0, "total_llm_calls": 0,
-                "prompt_tokens": 0, "completion_tokens": 0,
+                "total_tokens": 0,
+                "total_llm_calls": 0,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
             }
             if not db_path.exists():
                 result.append(row)
                 continue
             try:
                 async with aiosqlite.connect(db_path) as db:
-                    runs = await (await db.execute(
-                        "SELECT status, started_at, ended_at, total_tokens, llm_calls, "
-                        "prompt_tokens, completion_tokens "
-                        "FROM agent_runs WHERE agent_id = ? ORDER BY started_at DESC",
-                        (name,),
-                    )).fetchall()
+                    runs = await (
+                        await db.execute(
+                            "SELECT status, started_at, ended_at, total_tokens, llm_calls, prompt_tokens, completion_tokens FROM agent_runs WHERE agent_id = ? ORDER BY started_at DESC",
+                            (name,),
+                        )
+                    ).fetchall()
                     row["total"] = len(runs)
                     row["completed"] = sum(1 for r in runs if r[0] == "completed")
                     row["failed"] = sum(1 for r in runs if r[0] == "failed")
@@ -1518,6 +1530,7 @@ def stats(
                         if r[1] and r[2]:
                             try:
                                 from datetime import datetime
+
                                 s = (datetime.fromisoformat(r[2]) - datetime.fromisoformat(r[1])).total_seconds()
                                 if s >= 0:
                                     durations.append(s)
@@ -1532,9 +1545,7 @@ def stats(
                     if not row["prompt_tokens"] and row["total_tokens"]:
                         row["prompt_tokens"] = int(row["total_tokens"] * 0.70)
                         row["completion_tokens"] = int(row["total_tokens"] * 0.30)
-                    mem = await (await db.execute(
-                        "SELECT COUNT(*) FROM memory_long WHERE agent_id = ?", (name,)
-                    )).fetchone()
+                    mem = await (await db.execute("SELECT COUNT(*) FROM memory_long WHERE agent_id = ?", (name,))).fetchone()
                     row["memory_keys"] = mem[0] if mem else 0
             except Exception:
                 pass
@@ -1557,11 +1568,7 @@ def stats(
     console.print()
     console.print(
         Panel(
-            f"  [bold]{len(rows)}[/bold] agents   "
-            f"[green bold]{running}[/green bold] running   "
-            f"[bold]{total_runs}[/bold] total runs   "
-            f"[dim]{_fmt_tokens(total_tokens)} tokens[/dim]"
-            f"{cost_part}",
+            f"  [bold]{len(rows)}[/bold] agents   [green bold]{running}[/green bold] running   [bold]{total_runs}[/bold] total runs   [dim]{_fmt_tokens(total_tokens)} tokens[/dim]{cost_part}",
             title="[bold]Ai.os  Stats[/bold]",
             border_style="dim",
             padding=(0, 1),
@@ -1601,19 +1608,17 @@ def stats(
         if cost:
             c = _estimate_cost(r["prompt_tokens"], r["completion_tokens"])
             row_data.append(_fmt_cost(c) if c else Text("—", style="dim"))
-        row_data.extend([
-            str(r["memory_keys"]) if r["memory_keys"] else Text("0", style="dim"),
-            last,
-        ])
+        row_data.extend(
+            [
+                str(r["memory_keys"]) if r["memory_keys"] else Text("0", style="dim"),
+                last,
+            ]
+        )
         t.add_row(*row_data)
 
     console.print(t)
     if cost:
-        console.print(
-            f"[dim]Cost estimates use Claude Sonnet 4.6 pricing "
-            f"(${_COST_INPUT_PER_M}/M input · ${_COST_OUTPUT_PER_M}/M output). "
-            f"Actual cost depends on the model configured per agent.[/dim]\n"
-        )
+        console.print(f"[dim]Cost estimates use Claude Sonnet 4.6 pricing (${_COST_INPUT_PER_M}/M input · ${_COST_OUTPUT_PER_M}/M output). Actual cost depends on the model configured per agent.[/dim]\n")
 
 
 def _fmt_dur(seconds: float) -> str:
@@ -1621,20 +1626,21 @@ def _fmt_dur(seconds: float) -> str:
     if s < 60:
         return f"{s}s"
     if s < 3600:
-        return f"{s//60}m {s%60}s"
-    return f"{s//3600}h {(s%3600)//60}m"
+        return f"{s // 60}m {s % 60}s"
+    return f"{s // 3600}h {(s % 3600) // 60}m"
 
 
 def _fmt_tokens(n: int) -> str:
     if n >= 1_000_000:
-        return f"{n/1_000_000:.1f}M"
+        return f"{n / 1_000_000:.1f}M"
     if n >= 1_000:
-        return f"{n/1_000:.1f}k"
+        return f"{n / 1_000:.1f}k"
     return str(n)
 
 
 def _fmt_relative(iso: str) -> str:
     from datetime import datetime, timezone
+
     try:
         d = datetime.fromisoformat(iso)
         if d.tzinfo is None:
@@ -1643,10 +1649,10 @@ def _fmt_relative(iso: str) -> str:
         if diff < 60:
             return "just now"
         if diff < 3600:
-            return f"{int(diff//60)}m ago"
+            return f"{int(diff // 60)}m ago"
         if diff < 86400:
-            return f"{int(diff//3600)}h ago"
-        return f"{int(diff//86400)}d ago"
+            return f"{int(diff // 3600)}h ago"
+        return f"{int(diff // 86400)}d ago"
     except Exception:
         return iso[:16]
 
@@ -1654,7 +1660,7 @@ def _fmt_relative(iso: str) -> str:
 # ── snapshot / rollback ──────────────────────────────────────────────────────
 
 
-def _snapshot_db(name: str) -> "Path":
+def _snapshot_db(name: str) -> Path:
     return PM.AIOS_DIR / "data" / f"{name}.db"
 
 
@@ -1668,8 +1674,9 @@ def snapshot(
     Snapshots capture the full long-term memory and can be restored later with
     [bold]aios rollback[/bold]. Useful before experimenting with prompts.
     """
-    import aiosqlite
     from datetime import datetime, timezone
+
+    import aiosqlite
 
     ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     tag = tag or ts
@@ -1686,29 +1693,22 @@ def snapshot(
                 " memory_json TEXT NOT NULL, created_at TEXT NOT NULL, "
                 " UNIQUE(agent_id, tag))"
             )
-            rows = await (await db.execute(
-                "SELECT key, value FROM memory_long WHERE agent_id = ?", (agent_name,)
-            )).fetchall()
+            rows = await (await db.execute("SELECT key, value FROM memory_long WHERE agent_id = ?", (agent_name,))).fetchall()
             memory_json = json.dumps([{"key": r[0], "value": r[1]} for r in rows])
             await db.execute(
-                "INSERT INTO agent_snapshots (agent_id, tag, memory_json, created_at) "
-                "VALUES (?, ?, ?, ?) "
-                "ON CONFLICT(agent_id, tag) DO UPDATE SET memory_json=excluded.memory_json, created_at=excluded.created_at",
+                "INSERT INTO agent_snapshots (agent_id, tag, memory_json, created_at) VALUES (?, ?, ?, ?) ON CONFLICT(agent_id, tag) DO UPDATE SET memory_json=excluded.memory_json, created_at=excluded.created_at",
                 (agent_name, tag, memory_json, datetime.now(timezone.utc).isoformat()),
             )
             await db.commit()
             return len(rows)
 
     import json
+
     count = asyncio.run(_snap())
     if count == -1:
         console.print(f"[red]No database found for agent[/red] [bold]{agent_name}[/bold]")
         raise typer.Exit(1)
-    console.print(
-        f"[green]✓[/green] Snapshot [bold]{tag}[/bold] saved "
-        f"([dim]{count} memory keys[/dim])\n"
-        f"  Restore with: [dim]aios rollback {agent_name} {tag}[/dim]"
-    )
+    console.print(f"[green]✓[/green] Snapshot [bold]{tag}[/bold] saved ([dim]{count} memory keys[/dim])\n  Restore with: [dim]aios rollback {agent_name} {tag}[/dim]")
 
 
 @app.command()
@@ -1724,19 +1724,14 @@ def snapshots(
             return []
         try:
             async with aiosqlite.connect(db_path) as db:
-                rows = await (await db.execute(
-                    "SELECT tag, created_at, length(memory_json) "
-                    "FROM agent_snapshots WHERE agent_id = ? "
-                    "ORDER BY created_at DESC", (agent_name,)
-                )).fetchall()
+                rows = await (await db.execute("SELECT tag, created_at, length(memory_json) FROM agent_snapshots WHERE agent_id = ? ORDER BY created_at DESC", (agent_name,))).fetchall()
                 return rows
         except Exception:
             return []
 
     rows = asyncio.run(_list())
     if not rows:
-        console.print(f"[dim]No snapshots for [bold]{agent_name}[/bold]. "
-                      f"Run [bold]aios snapshot {agent_name}[/bold] first.[/dim]")
+        console.print(f"[dim]No snapshots for [bold]{agent_name}[/bold]. Run [bold]aios snapshot {agent_name}[/bold] first.[/dim]")
         return
 
     t = Table(box=box.SIMPLE_HEAD, show_header=True, header_style="dim", padding=(0, 1))
@@ -1744,7 +1739,6 @@ def snapshots(
     t.add_column("Created", min_width=14)
     t.add_column("Size", justify="right", min_width=8)
 
-    import json
     for tag, created_at, sz in rows:
         age = _fmt_relative(created_at) if created_at else "—"
         t.add_row(tag, age, f"{sz // 1024}k" if sz >= 1024 else f"{sz}b")
@@ -1765,8 +1759,9 @@ def rollback(
     [yellow]Warning:[/yellow] This overwrites the agent's current long-term memory.
     Run [bold]aios snapshot[/bold] first to preserve the current state.
     """
-    import aiosqlite
     import json
+
+    import aiosqlite
 
     async def _load_snap() -> list[dict] | None:
         db_path = _snapshot_db(agent_name)
@@ -1774,10 +1769,7 @@ def rollback(
             return None
         try:
             async with aiosqlite.connect(db_path) as db:
-                row = await (await db.execute(
-                    "SELECT memory_json FROM agent_snapshots "
-                    "WHERE agent_id = ? AND tag = ?", (agent_name, tag)
-                )).fetchone()
+                row = await (await db.execute("SELECT memory_json FROM agent_snapshots WHERE agent_id = ? AND tag = ?", (agent_name, tag))).fetchone()
                 if not row:
                     return None
                 return json.loads(row[0])
@@ -1786,6 +1778,7 @@ def rollback(
 
     async def _restore(entries: list[dict]) -> int:
         from datetime import datetime, timezone
+
         db_path = _snapshot_db(agent_name)
         async with aiosqlite.connect(db_path) as db:
             await db.execute("DELETE FROM memory_long WHERE agent_id = ?", (agent_name,))
@@ -1805,13 +1798,10 @@ def rollback(
         raise typer.Exit(1)
 
     if not yes:
-        console.print(
-            f"[yellow]⚠[/yellow]  This will overwrite [bold]{agent_name}[/bold]'s "
-            f"current memory with snapshot [bold]{tag}[/bold] ({len(entries)} keys)."
-        )
+        console.print(f"[yellow]⚠[/yellow]  This will overwrite [bold]{agent_name}[/bold]'s current memory with snapshot [bold]{tag}[/bold] ({len(entries)} keys).")
         typer.confirm("Continue?", abort=True)
 
-    restored = asyncio.run(_restore(entries))
+    asyncio.run(_restore(entries))
     console.print(f"[green]✓[/green] Restored [bold]{len(entries)}[/bold] memory keys from snapshot [bold]{tag}[/bold]")
 
 
@@ -1866,13 +1856,15 @@ def mcp(
             )
         )
 
-    asyncio.run(run_mcp_server(
-        agent_file=agent_file.resolve(),
-        tool_name=tool_name,
-        tool_description=tool_desc,
-        port=port,
-        stdio=stdio,
-    ))
+    asyncio.run(
+        run_mcp_server(
+            agent_file=agent_file.resolve(),
+            tool_name=tool_name,
+            tool_description=tool_desc,
+            port=port,
+            stdio=stdio,
+        )
+    )
 
 
 # ── eval ─────────────────────────────────────────────────────────────────────
@@ -1882,7 +1874,9 @@ def mcp(
 def eval(
     agent_file: Path = typer.Argument(..., help="Path to the agent Python file"),
     suite: Path = typer.Option(
-        Path(""), "--suite", "-s",
+        Path(""),
+        "--suite",
+        "-s",
         help="Path to eval YAML file (default: <agent_stem>.eval.yaml)",
     ),
     update: bool = typer.Option(False, "--update", "-u", help="Update golden outputs in the YAML"),
@@ -1906,7 +1900,7 @@ def eval(
           expected: "Paris"              # substring match (or exact with exact: true)
           exact: false
     """
-    from ..eval.runner import run_eval_suite, EvalResult
+    from ..eval.runner import EvalResult, run_eval_suite
 
     if not agent_file.exists():
         console.print(f"[red]File not found:[/red] {agent_file}")
@@ -1920,8 +1914,8 @@ def eval(
             f"# Run: aios eval {agent_file} --update  (captures first golden outputs)\n\n"
             f"cases:\n"
             f"  - name: example\n"
-            f"    mock_response: \"Hello from the mock LLM\"\n"
-            f"    expected: \"Hello\"   # substring match\n"
+            f'    mock_response: "Hello from the mock LLM"\n'
+            f'    expected: "Hello"   # substring match\n'
             f"    exact: false\n"
         )
         suite_path.write_text(starter)
@@ -1929,9 +1923,7 @@ def eval(
         console.print(f"[dim]Edit it, then run:[/dim] aios eval {agent_file} --update")
         return
 
-    results: list[EvalResult] = asyncio.run(
-        run_eval_suite(agent_file.resolve(), suite_path, update=update)
-    )
+    results: list[EvalResult] = asyncio.run(run_eval_suite(agent_file.resolve(), suite_path, update=update))
 
     if not results:
         console.print("[dim]No cases found in suite.[/dim]")
@@ -1965,17 +1957,10 @@ def eval(
 
     console.print()
     total = len(results)
-    summary = (
-        f"[bold]{total}[/bold] cases  "
-        f"[green bold]{len(passed)} passed[/green bold]  "
-        f"[red]{len(failed)} failed[/red]  "
-        f"[dim]{len(skipped)} skipped[/dim]"
-    )
+    summary = f"[bold]{total}[/bold] cases  [green bold]{len(passed)} passed[/green bold]  [red]{len(failed)} failed[/red]  [dim]{len(skipped)} skipped[/dim]"
     if update:
         summary += "  [yellow bold]— golden outputs updated[/yellow bold]"
-    console.print(
-        Panel(summary, title="[bold]aios eval[/bold]", border_style="dim", padding=(0, 1))
-    )
+    console.print(Panel(summary, title="[bold]aios eval[/bold]", border_style="dim", padding=(0, 1)))
     console.print()
 
     if junit != Path(""):
@@ -1986,30 +1971,37 @@ def eval(
         raise typer.Exit(1)
 
 
-def _write_junit(path: Path, results: "list", suite_name: str) -> None:
+def _write_junit(path: Path, results: list, suite_name: str) -> None:
     """Write JUnit XML that CI systems (GitHub Actions, GitLab, Jenkins) can parse."""
-    from xml.etree.ElementTree import Element, SubElement, tostring
     from xml.dom.minidom import parseString
+    from xml.etree.ElementTree import Element, SubElement, tostring
 
     total = len(results)
     failures = sum(1 for r in results if not r.passed and not r.skipped)
     skipped = sum(1 for r in results if r.skipped)
     time_total = sum(r.duration or 0 for r in results)
 
-    suite = Element("testsuite", {
-        "name": suite_name,
-        "tests": str(total),
-        "failures": str(failures),
-        "skipped": str(skipped),
-        "time": f"{time_total:.3f}",
-    })
+    suite = Element(
+        "testsuite",
+        {
+            "name": suite_name,
+            "tests": str(total),
+            "failures": str(failures),
+            "skipped": str(skipped),
+            "time": f"{time_total:.3f}",
+        },
+    )
 
     for r in results:
-        tc = SubElement(suite, "testcase", {
-            "name": r.name,
-            "classname": suite_name,
-            "time": f"{r.duration or 0:.3f}",
-        })
+        tc = SubElement(
+            suite,
+            "testcase",
+            {
+                "name": r.name,
+                "classname": suite_name,
+                "time": f"{r.duration or 0:.3f}",
+            },
+        )
         if r.skipped:
             SubElement(tc, "skipped")
         elif not r.passed:
@@ -2059,8 +2051,7 @@ def publish(
 
     # __init__.py
     (pkg_dir / "__init__.py").write_text(
-        f'"""Ai.os agent package: {pkg_name}."""\n'
-        f'from .agent import *  # noqa: F401,F403\n',
+        f'"""Ai.os agent package: {pkg_name}."""\nfrom .agent import *  # noqa: F401,F403\n',
         encoding="utf-8",
     )
 
@@ -2079,6 +2070,7 @@ def publish(
 
     # pyproject.toml
     from .. import __version__
+
     pyproject = f"""\
 [build-system]
 requires = ["hatchling"]
@@ -2133,14 +2125,16 @@ Set your LLM API key in `.env` (see `.env.example` in [aios-runtime](https://pyp
         console.print("[dim]Building...[/dim]")
         result = subprocess.run(
             [sys.executable, "-m", "build", str(output)],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if result.returncode != 0:
             console.print(f"[red]Build failed:[/red]\n{result.stderr}")
             raise typer.Exit(1)
         result2 = subprocess.run(
             [sys.executable, "-m", "twine", "upload", str(output / "dist" / "*")],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if result2.returncode != 0:
             console.print(f"[red]Upload failed:[/red]\n{result2.stderr}")
@@ -2222,15 +2216,13 @@ def deploy(
     rows = "\n".join(f"  [dim]→[/dim]  [bold]{output}/{f}[/bold]" for f in written)
     next_step = {
         "docker": f"cd {output} && docker compose up -d",
-        "fly":    f"cd {output} && fly launch --no-deploy && fly secrets set ... && fly deploy",
+        "fly": f"cd {output} && fly launch --no-deploy && fly secrets set ... && fly deploy",
         "systemd": f"sudo bash {output}/install-service.sh",
     }[platform]
 
     console.print(
         Panel(
-            f"[green]Deploy bundle created[/green]  [dim]({platform})[/dim]\n\n"
-            f"{rows}\n\n"
-            f"[bold]Next:[/bold]\n  [cyan]{next_step}[/cyan]",
+            f"[green]Deploy bundle created[/green]  [dim]({platform})[/dim]\n\n{rows}\n\n[bold]Next:[/bold]\n  [cyan]{next_step}[/cyan]",
             title="[bold]aios deploy[/bold]",
             border_style="dim",
             padding=(0, 1),
@@ -2476,6 +2468,7 @@ def _workspace_load_config() -> dict:
     if not p.exists():
         return {}
     import json as _json
+
     try:
         return _json.loads(p.read_text(encoding="utf-8"))
     except Exception:
@@ -2486,11 +2479,12 @@ def _workspace_save_config(cfg: dict) -> None:
     p = _workspace_config_path()
     p.parent.mkdir(parents=True, exist_ok=True)
     import json as _json
+
     p.write_text(_json.dumps(cfg, indent=2), encoding="utf-8")
 
 
-@workspace_app.command()
-def init(
+@workspace_app.command("init")
+def workspace_init(
     name: str = typer.Argument(..., help="Workspace name (identifier for this team)"),
     share_dir: str = typer.Option("", "--dir", "-d", help="Shared directory path (e.g. a mounted network share or Dropbox folder)"),
 ) -> None:
@@ -2522,6 +2516,7 @@ def push(
 ) -> None:
     """Push an agent's memory to the shared workspace directory."""
     import json as _json
+
     cfg = _workspace_load_config()
     if not cfg.get("dir"):
         console.print("[red]No workspace configured.[/red] Run: aios workspace init <name> --dir <path>")
@@ -2533,6 +2528,7 @@ def push(
 
     async def _dump() -> dict:
         import aiosqlite
+
         data: dict = {"agent": agent_name, "memory": {}, "timeline": []}
         async with aiosqlite.connect(db_path) as db:
             try:
@@ -2546,9 +2542,7 @@ def push(
                 pass
             if not no_timeline:
                 try:
-                    rows = await (await db.execute(
-                        "SELECT event_type, data, created_at FROM memory_timeline ORDER BY created_at DESC LIMIT 500"
-                    )).fetchall()
+                    rows = await (await db.execute("SELECT event_type, data, created_at FROM memory_timeline ORDER BY created_at DESC LIMIT 500")).fetchall()
                     for r in rows:
                         try:
                             data["timeline"].append({"event": r[0], "data": _json.loads(r[1] or "{}"), "at": r[2]})
@@ -2576,6 +2570,7 @@ def pull(
 ) -> None:
     """Pull an agent's memory from the shared workspace directory."""
     import json as _json
+
     cfg = _workspace_load_config()
     if not cfg.get("dir"):
         console.print("[red]No workspace configured.[/red] Run: aios workspace init <name> --dir <path>")
@@ -2589,8 +2584,10 @@ def pull(
     db_path = PM.AIOS_DIR / "data" / f"{agent_name}.db"
 
     async def _restore() -> tuple[int, int]:
-        import aiosqlite
         from datetime import datetime
+
+        import aiosqlite
+
         db_path.parent.mkdir(parents=True, exist_ok=True)
         async with aiosqlite.connect(db_path) as db:
             await db.execute("CREATE TABLE IF NOT EXISTS memory_long (agent_id TEXT, key TEXT, value TEXT, updated_at TEXT, PRIMARY KEY(agent_id, key))")
@@ -2600,8 +2597,7 @@ def pull(
             mem_count = 0
             for k, v in payload.get("memory", {}).items():
                 await db.execute(
-                    "INSERT INTO memory_long (agent_id, key, value, updated_at) VALUES (?,?,?,?) "
-                    "ON CONFLICT(agent_id, key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+                    "INSERT INTO memory_long (agent_id, key, value, updated_at) VALUES (?,?,?,?) ON CONFLICT(agent_id, key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
                     (agent_name, k, _json.dumps(v), datetime.utcnow().isoformat()),
                 )
                 mem_count += 1
@@ -2609,7 +2605,7 @@ def pull(
             for ev in payload.get("timeline", []):
                 await db.execute(
                     "INSERT INTO memory_timeline (agent_id, event_type, data, created_at) VALUES (?,?,?,?)",
-                    (agent_name, ev.get("event",""), _json.dumps(ev.get("data",{})), ev.get("at","")),
+                    (agent_name, ev.get("event", ""), _json.dumps(ev.get("data", {})), ev.get("at", "")),
                 )
                 tl_count += 1
             await db.commit()
@@ -2624,13 +2620,14 @@ def pull(
 def workspace_list() -> None:
     """List agents available in the shared workspace."""
     import json as _json
+
     cfg = _workspace_load_config()
     if not cfg.get("dir"):
         console.print("[dim]No workspace configured. Run: aios workspace init <name> --dir <path>[/dim]")
         return
     agents_dir = Path(cfg["dir"]) / "agents"
     if not agents_dir.exists():
-        console.print(f"[dim]No agents pushed yet to workspace [bold]{cfg.get('name','')}[/bold][/dim]")
+        console.print(f"[dim]No agents pushed yet to workspace [bold]{cfg.get('name', '')}[/bold][/dim]")
         return
     files = sorted(agents_dir.glob("*.json"))
     if not files:

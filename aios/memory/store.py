@@ -115,9 +115,7 @@ class MemoryStore:
         async with aiosqlite.connect(self._db_path) as db:
             rows = await (
                 await db.execute(
-                    "SELECT key, value, updated_at FROM memory_long "
-                    "WHERE agent_id = ? AND (key LIKE ? OR value LIKE ?) "
-                    "ORDER BY updated_at DESC LIMIT ?",
+                    "SELECT key, value, updated_at FROM memory_long WHERE agent_id = ? AND (key LIKE ? OR value LIKE ?) ORDER BY updated_at DESC LIMIT ?",
                     (self._agent_id, pattern, pattern, limit),
                 )
             ).fetchall()

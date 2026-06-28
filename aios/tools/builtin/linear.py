@@ -38,11 +38,7 @@ class LinearMixin:
     def _linear_key(self) -> str:
         key = os.environ.get("LINEAR_API_KEY", "")
         if not key:
-            raise OSError(
-                "LINEAR_API_KEY not set. "
-                "Create a Personal API key at https://linear.app/settings/api "
-                "and set LINEAR_API_KEY=lin_api_..."
-            )
+            raise OSError("LINEAR_API_KEY not set. Create a Personal API key at https://linear.app/settings/api and set LINEAR_API_KEY=lin_api_...")
         return key
 
     async def _gql(self, query: str, variables: dict | None = None) -> dict[str, Any]:
@@ -148,10 +144,7 @@ class LinearMixin:
             """
         data = await self._gql(query)
         n = data.get("issue", {})
-        comments = [
-            {"author": c["user"]["name"], "body": c["body"], "date": c["createdAt"][:10]}
-            for c in n.get("comments", {}).get("nodes", [])
-        ]
+        comments = [{"author": c["user"]["name"], "body": c["body"], "date": c["createdAt"][:10]} for c in n.get("comments", {}).get("nodes", [])]
         return {
             "id": n.get("id", ""),
             "identifier": n.get("identifier", ""),
@@ -202,9 +195,7 @@ class LinearMixin:
 
         # Resolve state ID if given
         if state:
-            state_data = await self._gql(
-                f'query {{ workflowStates(filter: {{team: {{key: {{eq: "{team}"}}}}, name: {{eq: "{state}"}}}}) {{ nodes {{ id }} }} }}'
-            )
+            state_data = await self._gql(f'query {{ workflowStates(filter: {{team: {{key: {{eq: "{team}"}}}}, name: {{eq: "{state}"}}}}) {{ nodes {{ id }} }} }}')
             nodes = state_data.get("workflowStates", {}).get("nodes", [])
             if nodes:
                 variables["stateId"] = nodes[0]["id"]
@@ -257,9 +248,7 @@ class LinearMixin:
 
         # Resolve state to ID
         if state:
-            state_data = await self._gql(
-                f'query {{ workflowStates(filter: {{name: {{eq: "{state}"}}}}) {{ nodes {{ id }} }} }}'
-            )
+            state_data = await self._gql(f'query {{ workflowStates(filter: {{name: {{eq: "{state}"}}}}) {{ nodes {{ id }} }} }}')
             nodes = state_data.get("workflowStates", {}).get("nodes", [])
             if nodes:
                 updates["stateId"] = nodes[0]["id"]
@@ -293,7 +282,4 @@ class LinearMixin:
     async def linear_list_teams(self) -> list[dict]:
         """List all teams in the Linear workspace."""
         data = await self._gql("query { teams { nodes { id key name description } } }")
-        return [
-            {"id": t["id"], "key": t["key"], "name": t["name"], "description": t.get("description", "")}
-            for t in data.get("teams", {}).get("nodes", [])
-        ]
+        return [{"id": t["id"], "key": t["key"], "name": t["name"], "description": t.get("description", "")} for t in data.get("teams", {}).get("nodes", [])]

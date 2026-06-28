@@ -31,22 +31,16 @@ class PostgresMixin:
     def _pg_url(self) -> str:
         url = os.environ.get("POSTGRES_URL", "")
         if not url:
-            raise OSError(
-                "POSTGRES_URL not set. "
-                "Set it to a standard PostgreSQL connection string: "
-                "postgresql://user:password@host:5432/database"
-            )
+            raise OSError("POSTGRES_URL not set. Set it to a standard PostgreSQL connection string: postgresql://user:password@host:5432/database")
         return url
 
     def _require_asyncpg(self) -> Any:
         try:
             import asyncpg
+
             return asyncpg
         except ImportError as exc:
-            raise ImportError(
-                "asyncpg is required for PostgresMixin. "
-                "Install it with: pip install asyncpg"
-            ) from exc
+            raise ImportError("asyncpg is required for PostgresMixin. Install it with: pip install asyncpg") from exc
 
     def _serialize_row(self, row: Any) -> dict[str, Any]:
         """Convert an asyncpg Record to a plain dict, serializing non-JSON types."""

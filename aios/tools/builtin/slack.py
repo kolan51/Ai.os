@@ -30,12 +30,7 @@ class SlackMixin:
     def _slack_token(self) -> str:
         token = os.environ.get("SLACK_BOT_TOKEN", "")
         if not token:
-            raise OSError(
-                "SLACK_BOT_TOKEN not set. "
-                "Create a Slack app at https://api.slack.com/apps, "
-                "add OAuth scopes (chat:write, channels:history), "
-                "install to workspace, and set SLACK_BOT_TOKEN=xoxb-..."
-            )
+            raise OSError("SLACK_BOT_TOKEN not set. Create a Slack app at https://api.slack.com/apps, add OAuth scopes (chat:write, channels:history), install to workspace, and set SLACK_BOT_TOKEN=xoxb-...")
         return token
 
     async def _slack_post(self, method: str, payload: dict) -> dict[str, Any]:

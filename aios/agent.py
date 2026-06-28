@@ -16,8 +16,8 @@ from .models.router import ModelRouter
 from .runtime.checkpoint import CheckpointEngine
 from .runtime.process import AIOS_DIR
 from .scheduling import _SCHEDULE_MARKER, Scheduler, parse_interval
-from .triggers import _TRIGGER_MARKER, WebhookServer
 from .tools.registry import ToolRegistry
+from .triggers import _TRIGGER_MARKER, WebhookServer
 
 logger = logging.getLogger("aios")
 
@@ -55,8 +55,8 @@ class Agent:
     system_prompt: str = ""
     temperature: float = 0.7
     max_tokens: int = 4096
-    max_tokens_per_run: int = 0   # 0 = unlimited; set to cap total LLM tokens this run
-    stream_tokens: bool = False   # write token chunks to log in real time (visible in web UI)
+    max_tokens_per_run: int = 0  # 0 = unlimited; set to cap total LLM tokens this run
+    stream_tokens: bool = False  # write token chunks to log in real time (visible in web UI)
     config: dict = {}
 
     # ── Runtime token accounting ──────────────────────────────────────────────
@@ -110,6 +110,7 @@ class Agent:
         # Silently skipped when the cryptography package is not installed.
         try:
             from .secrets import SecretsStore
+
             store = SecretsStore()
             await store.inject_to_env()
         except ImportError:
@@ -173,19 +174,20 @@ class Agent:
 
     # ── Message bus ──────────────────────────────────────────────────────────
 
-    async def publish(self, topic: str, payload: "Any", ttl: int = 86_400) -> int:
+    async def publish(self, topic: str, payload: Any, ttl: int = 86_400) -> int:
         """Publish a message to a bus topic. Other agents can receive it with subscribe().
 
         Returns the message ID. TTL is in seconds (default 24h; 0 = no expiry).
         """
         from .bus.store import get_bus
+
         bus = get_bus()
         await bus.setup()
         msg_id = await bus.publish(topic, payload, sender=self.name, ttl=ttl)
         self.logger.debug("[%s] published to '%s' (id=%d)", self.name, topic, msg_id)
         return msg_id
 
-    async def subscribe(self, topic: str, since: int = 0, limit: int = 100) -> "tuple[list[dict], int]":
+    async def subscribe(self, topic: str, since: int = 0, limit: int = 100) -> tuple[list[dict], int]:
         """Poll a bus topic for messages newer than `since` (a message ID cursor).
 
         Returns (messages, new_cursor). Pass the cursor back on the next call to
@@ -201,13 +203,15 @@ class Agent:
                 await asyncio.sleep(60)
         """
         from .bus.store import get_bus
+
         bus = get_bus()
         await bus.setup()
         return await bus.poll(topic, since=since, limit=limit)
 
-    async def wait_for_message(self, topic: str, timeout: float = 30.0, since: int = 0) -> "dict | None":
+    async def wait_for_message(self, topic: str, timeout: float = 30.0, since: int = 0) -> dict | None:
         """Block until a message arrives on topic, or timeout (seconds). Returns the message or None."""
         from .bus.store import get_bus
+
         bus = get_bus()
         await bus.setup()
         return await bus.wait(topic, timeout=timeout, since=since)
@@ -216,9 +220,7 @@ class Agent:
 
     def _check_budget(self) -> None:
         if self.max_tokens_per_run > 0 and self._tokens_used >= self.max_tokens_per_run:
-            raise RuntimeError(
-                f"[{self.name}] token budget exceeded: {self._tokens_used} / {self.max_tokens_per_run} tokens used"
-            )
+            raise RuntimeError(f"[{self.name}] token budget exceeded: {self._tokens_used} / {self.max_tokens_per_run} tokens used")
 
     def _record_usage(self, usage: dict) -> None:
         pt = usage.get("prompt_tokens", 0) or 0
@@ -373,14 +375,19 @@ class Agent:
             await self.on_stop()
             await self._checkpoint.end_run(error=error)
             if error is None:
-                await self.memory.log_event("run_completed", {
-                    "run_id": run_id,
-                    "tokens": self._tokens_used,
-                    "llm_calls": self._llm_calls,
-                })
+                await self.memory.log_event(
+                    "run_completed",
+                    {
+                        "run_id": run_id,
+                        "tokens": self._tokens_used,
+                        "llm_calls": self._llm_calls,
+                    },
+                )
                 logger.info(
                     "[%s] run completed — %d tokens across %d LLM call(s)",
-                    self.name, self._tokens_used, self._llm_calls,
+                    self.name,
+                    self._tokens_used,
+                    self._llm_calls,
                 )
 
     @classmethod
@@ -402,10 +409,12 @@ class Agent:
 async def _fire_alert_webhook(agent_name: str, run_id: str, error: str) -> None:
     """POST to AIOS_ALERT_WEBHOOK when an agent crashes. Silent if not configured."""
     import os
+
     url = os.environ.get("AIOS_ALERT_WEBHOOK", "").strip()
     if not url:
         return
     import datetime
+
     payload = {
         "agent": agent_name,
         "run_id": run_id,
@@ -416,6 +425,7 @@ async def _fire_alert_webhook(agent_name: str, run_id: str, error: str) -> None:
     }
     try:
         import httpx
+
         async with httpx.AsyncClient(timeout=8) as client:
             await client.post(url, json=payload)
         logger.info("[%s] alert webhook fired → %s", agent_name, url)

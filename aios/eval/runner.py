@@ -20,19 +20,18 @@ YAML format::
         exact: false                   # set true for exact equality
         skip: false                    # set true to skip this case
 """
+
 from __future__ import annotations
 
 import importlib.util
 import inspect
 import time
-import traceback
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-
 # ── Result dataclass ──────────────────────────────────────────────────────────
+
 
 @dataclass
 class EvalResult:
@@ -46,6 +45,7 @@ class EvalResult:
 
 
 # ── Agent loader (shared with MCP server) ─────────────────────────────────────
+
 
 def _load_agent_class(agent_file: Path):
     from ..agent import Agent
@@ -63,6 +63,7 @@ def _load_agent_class(agent_file: Path):
 
 
 # ── Mock LLM builder ──────────────────────────────────────────────────────────
+
 
 def _build_mock_response(text: str) -> MagicMock:
     """Build a litellm-style ModelResponse mock from plain text."""
@@ -91,6 +92,7 @@ def _mock_completion(responses: list[str]):
 
 
 # ── Case runner ───────────────────────────────────────────────────────────────
+
 
 async def _run_case(agent_class, case: dict) -> EvalResult:
     name = case.get("name", "unnamed")
@@ -148,7 +150,7 @@ async def _run_case(agent_class, case: dict) -> EvalResult:
             await agent.memory.load("result")
             or await agent.memory.load("output")
             or await agent.memory.load("answer")
-            or agent.memory.get("result")   # short-term fallback
+            or agent.memory.get("result")  # short-term fallback
             or ""
         )
     result.actual = str(actual) if actual else ""
@@ -164,12 +166,13 @@ async def _run_case(agent_class, case: dict) -> EvalResult:
 async def _safe_bootstrap(agent) -> None:
     """Bootstrap the agent using in-memory SQLite so no disk state is needed."""
     import logging
+    import tempfile
+
     from ..memory.store import MemoryStore
-    from ..runtime.checkpoint import CheckpointEngine
     from ..models.router import ModelRouter
+    from ..runtime.checkpoint import CheckpointEngine
     from ..tools.registry import ToolRegistry
 
-    import tempfile, os
     agent_id = getattr(agent.__class__, "name", "eval_agent")
 
     # Use a temp file so all connections within this run share the same SQLite DB
@@ -203,6 +206,7 @@ async def _safe_bootstrap(agent) -> None:
 
 # ── Suite runner ──────────────────────────────────────────────────────────────
 
+
 async def run_eval_suite(
     agent_file: Path,
     suite_path: Path,
@@ -215,12 +219,15 @@ async def run_eval_suite(
         # Minimal YAML parser for simple cases: fallback to json if yaml unavailable
         try:
             import json as yaml  # type: ignore
+
             _load = lambda p: json.load(open(p))  # noqa: E731
         except Exception:
             raise ImportError("Install PyYAML: pip install pyyaml")
     else:
+
         def _load(p: Path):
             import yaml as _y
+
             with open(p) as f:
                 return _y.safe_load(f)
 
@@ -242,10 +249,12 @@ async def run_eval_suite(
     if update and cases:
         try:
             import yaml
+
             with open(suite_path, "w") as f:
                 yaml.safe_dump({"cases": cases}, f, default_flow_style=False, allow_unicode=True)
         except ImportError:
             import json
+
             with open(suite_path, "w") as f:
                 json.dump({"cases": cases}, f, indent=2)
 

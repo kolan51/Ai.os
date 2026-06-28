@@ -46,27 +46,23 @@ def create_app() -> FastAPI:
                 continue
             try:
                 async with aiosqlite.connect(db_path) as db:
-                    run_rows = await (await db.execute(
-                        "SELECT status FROM agent_runs WHERE agent_id = ?", (name,)
-                    )).fetchall()
+                    run_rows = await (await db.execute("SELECT status FROM agent_runs WHERE agent_id = ?", (name,))).fetchall()
                     total = len(run_rows)
                     completed = sum(1 for r in run_rows if r[0] == "completed")
                     failed = sum(1 for r in run_rows if r[0] == "failed")
 
-                    mem_row = await (await db.execute(
-                        "SELECT COUNT(*) FROM memory_long WHERE agent_id = ?", (name,)
-                    )).fetchone()
+                    mem_row = await (await db.execute("SELECT COUNT(*) FROM memory_long WHERE agent_id = ?", (name,))).fetchone()
                     mem_keys = mem_row[0] if mem_row else 0
 
-                    run_row = await (await db.execute(
-                        "SELECT id FROM agent_runs WHERE agent_id = ? ORDER BY started_at DESC LIMIT 1", (name,)
-                    )).fetchone()
+                    run_row = await (await db.execute("SELECT id FROM agent_runs WHERE agent_id = ? ORDER BY started_at DESC LIMIT 1", (name,))).fetchone()
                     cp_count = 0
                     if run_row:
-                        cp_row = await (await db.execute(
-                            "SELECT COUNT(*) FROM checkpoints WHERE agent_id = ? AND run_id = ?",
-                            (name, run_row[0]),
-                        )).fetchone()
+                        cp_row = await (
+                            await db.execute(
+                                "SELECT COUNT(*) FROM checkpoints WHERE agent_id = ? AND run_id = ?",
+                                (name, run_row[0]),
+                            )
+                        ).fetchone()
                         cp_count = cp_row[0] if cp_row else 0
             except Exception:
                 total = completed = failed = mem_keys = cp_count = 0
@@ -125,16 +121,16 @@ def create_app() -> FastAPI:
             return []
         async with aiosqlite.connect(db_path) as db:
             try:
-                rows = await (await db.execute(
-                    "SELECT id, status, started_at, ended_at, error, "
-                    "COALESCE(total_tokens,0), COALESCE(llm_calls,0) "
-                    "FROM agent_runs ORDER BY started_at DESC LIMIT 20"
-                )).fetchall()
+                rows = await (await db.execute("SELECT id, status, started_at, ended_at, error, COALESCE(total_tokens,0), COALESCE(llm_calls,0) FROM agent_runs ORDER BY started_at DESC LIMIT 20")).fetchall()
                 return [
                     {
-                        "id": r[0][:8], "status": r[1], "started_at": r[2],
-                        "ended_at": r[3], "error": r[4],
-                        "total_tokens": r[5], "llm_calls": r[6],
+                        "id": r[0][:8],
+                        "status": r[1],
+                        "started_at": r[2],
+                        "ended_at": r[3],
+                        "error": r[4],
+                        "total_tokens": r[5],
+                        "llm_calls": r[6],
                     }
                     for r in rows
                 ]
@@ -144,6 +140,7 @@ def create_app() -> FastAPI:
     @app.get("/api/agents/{name}/logs")
     async def agent_logs(name: str, lines: int = 100) -> dict:
         import re
+
         _ansi = re.compile(r"\x1b\[[0-9;]*[mGKHF]")
         log_path = PM.log_file(name)
         if not log_path.exists():
@@ -177,22 +174,28 @@ def create_app() -> FastAPI:
         async with aiosqlite.connect(db_path) as db:
             try:
                 if run_id:
-                    rows = await (await db.execute(
-                        "SELECT tool_name, args_hash, created_at FROM checkpoints WHERE agent_id = ? AND run_id = ? ORDER BY created_at ASC",
-                        (name, run_id),
-                    )).fetchall()
+                    rows = await (
+                        await db.execute(
+                            "SELECT tool_name, args_hash, created_at FROM checkpoints WHERE agent_id = ? AND run_id = ? ORDER BY created_at ASC",
+                            (name, run_id),
+                        )
+                    ).fetchall()
                 else:
                     # Latest run
-                    run_row = await (await db.execute(
-                        "SELECT id FROM agent_runs WHERE agent_id = ? ORDER BY started_at DESC LIMIT 1",
-                        (name,),
-                    )).fetchone()
+                    run_row = await (
+                        await db.execute(
+                            "SELECT id FROM agent_runs WHERE agent_id = ? ORDER BY started_at DESC LIMIT 1",
+                            (name,),
+                        )
+                    ).fetchone()
                     if not run_row:
                         return []
-                    rows = await (await db.execute(
-                        "SELECT tool_name, args_hash, created_at FROM checkpoints WHERE agent_id = ? AND run_id = ? ORDER BY created_at ASC",
-                        (name, run_row[0]),
-                    )).fetchall()
+                    rows = await (
+                        await db.execute(
+                            "SELECT tool_name, args_hash, created_at FROM checkpoints WHERE agent_id = ? AND run_id = ? ORDER BY created_at ASC",
+                            (name, run_row[0]),
+                        )
+                    ).fetchall()
                 return [{"tool": r[0], "args_hash": r[1], "at": r[2]} for r in rows]
             except Exception:
                 return []
@@ -205,10 +208,12 @@ def create_app() -> FastAPI:
             return {"nodes": [], "clusters": []}
         try:
             async with aiosqlite.connect(db_path) as db:
-                rows = await (await db.execute(
-                    "SELECT key, value, updated_at FROM memory_long WHERE agent_id = ? ORDER BY updated_at DESC LIMIT 200",
-                    (name,),
-                )).fetchall()
+                rows = await (
+                    await db.execute(
+                        "SELECT key, value, updated_at FROM memory_long WHERE agent_id = ? ORDER BY updated_at DESC LIMIT 200",
+                        (name,),
+                    )
+                ).fetchall()
         except Exception:
             return {"nodes": [], "clusters": []}
 
@@ -219,18 +224,17 @@ def create_app() -> FastAPI:
             sep = ":" if ":" in key else "_" if "_" in key else None
             cluster = key.split(sep)[0] if sep else "__root__"
             cluster_map.setdefault(cluster, []).append(i)
-            nodes.append({
-                "id": i,
-                "key": key,
-                "preview": _preview(value, 60),
-                "updated_at": updated_at or "",
-                "cluster": cluster,
-            })
+            nodes.append(
+                {
+                    "id": i,
+                    "key": key,
+                    "preview": _preview(value, 60),
+                    "updated_at": updated_at or "",
+                    "cluster": cluster,
+                }
+            )
 
-        clusters = [
-            {"name": name_, "node_ids": ids}
-            for name_, ids in cluster_map.items()
-        ]
+        clusters = [{"name": name_, "node_ids": ids} for name_, ids in cluster_map.items()]
         return {"nodes": nodes, "clusters": clusters}
 
     # ── Export endpoints ─────────────────────────────────────────────────────
@@ -239,23 +243,21 @@ def create_app() -> FastAPI:
     async def export_runs_csv(name: str) -> Response:
         db_path = PM.AIOS_DIR / "data" / f"{name}.db"
         if not db_path.exists():
-            return Response(content="run_id,status,started_at,ended_at,duration_s,total_tokens,llm_calls,error\n",
-                            media_type="text/csv")
-        import csv, io
+            return Response(content="run_id,status,started_at,ended_at,duration_s,total_tokens,llm_calls,error\n", media_type="text/csv")
+        import csv
+        import io
+
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(["run_id", "status", "started_at", "ended_at", "duration_s", "total_tokens", "llm_calls", "error"])
         async with aiosqlite.connect(db_path) as db:
             try:
-                rows = await (await db.execute(
-                    "SELECT id, status, started_at, ended_at, "
-                    "COALESCE(total_tokens,0), COALESCE(llm_calls,0), error "
-                    "FROM agent_runs ORDER BY started_at DESC"
-                )).fetchall()
+                rows = await (await db.execute("SELECT id, status, started_at, ended_at, COALESCE(total_tokens,0), COALESCE(llm_calls,0), error FROM agent_runs ORDER BY started_at DESC")).fetchall()
                 for r in rows:
                     dur = ""
                     try:
                         from datetime import datetime
+
                         fmt = "%Y-%m-%d %H:%M:%S"
                         s = datetime.strptime(r[2][:19], fmt)
                         e = datetime.strptime(r[3][:19], fmt) if r[3] else s
@@ -265,58 +267,53 @@ def create_app() -> FastAPI:
                     writer.writerow([r[0], r[1], r[2], r[3] or "", dur, r[4], r[5], r[6] or ""])
             except Exception:
                 pass
-        return Response(content=output.getvalue(), media_type="text/csv",
-                        headers={"Content-Disposition": f'attachment; filename="{name}-runs.csv"'})
+        return Response(content=output.getvalue(), media_type="text/csv", headers={"Content-Disposition": f'attachment; filename="{name}-runs.csv"'})
 
     @app.get("/api/agents/{name}/export/memory.csv")
     async def export_memory_csv(name: str) -> Response:
         db_path = PM.AIOS_DIR / "data" / f"{name}.db"
         if not db_path.exists():
             return Response(content="key,value,updated_at\n", media_type="text/csv")
-        import csv, io
+        import csv
+        import io
+
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(["key", "value", "updated_at"])
         async with aiosqlite.connect(db_path) as db:
             try:
-                rows = await (await db.execute(
-                    "SELECT key, value, updated_at FROM memory_long ORDER BY updated_at DESC"
-                )).fetchall()
+                rows = await (await db.execute("SELECT key, value, updated_at FROM memory_long ORDER BY updated_at DESC")).fetchall()
                 for r in rows:
                     writer.writerow([r[0], r[1], r[2]])
             except Exception:
                 pass
-        return Response(content=output.getvalue(), media_type="text/csv",
-                        headers={"Content-Disposition": f'attachment; filename="{name}-memory.csv"'})
+        return Response(content=output.getvalue(), media_type="text/csv", headers={"Content-Disposition": f'attachment; filename="{name}-memory.csv"'})
 
     @app.get("/api/agents/{name}/export/timeline.csv")
     async def export_timeline_csv(name: str) -> Response:
         db_path = PM.AIOS_DIR / "data" / f"{name}.db"
         if not db_path.exists():
             return Response(content="event_type,data,created_at\n", media_type="text/csv")
-        import csv, io
+        import csv
+        import io
+
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(["event_type", "data", "created_at"])
         async with aiosqlite.connect(db_path) as db:
             try:
-                rows = await (await db.execute(
-                    "SELECT event_type, data, created_at FROM memory_timeline ORDER BY created_at DESC"
-                )).fetchall()
+                rows = await (await db.execute("SELECT event_type, data, created_at FROM memory_timeline ORDER BY created_at DESC")).fetchall()
                 for r in rows:
                     writer.writerow([r[0], r[1], r[2]])
             except Exception:
                 # try old column name
                 try:
-                    rows = await (await db.execute(
-                        "SELECT event, data, created_at FROM memory_timeline ORDER BY created_at DESC"
-                    )).fetchall()
+                    rows = await (await db.execute("SELECT event, data, created_at FROM memory_timeline ORDER BY created_at DESC")).fetchall()
                     for r in rows:
                         writer.writerow([r[0], r[1], r[2]])
                 except Exception:
                     pass
-        return Response(content=output.getvalue(), media_type="text/csv",
-                        headers={"Content-Disposition": f'attachment; filename="{name}-timeline.csv"'})
+        return Response(content=output.getvalue(), media_type="text/csv", headers={"Content-Disposition": f'attachment; filename="{name}-timeline.csv"'})
 
     @app.get("/api/agents/{name}/export/report.json")
     async def export_report_json(name: str) -> Response:
@@ -324,25 +321,17 @@ def create_app() -> FastAPI:
         db_path = PM.AIOS_DIR / "data" / f"{name}.db"
         report: dict = {"agent": name, "generated_at": None, "runs": [], "memory": {}, "timeline": []}
         from datetime import datetime, timezone
+
         report["generated_at"] = datetime.now(timezone.utc).isoformat()
         if db_path.exists():
             async with aiosqlite.connect(db_path) as db:
                 try:
-                    rows = await (await db.execute(
-                        "SELECT id, status, started_at, ended_at, COALESCE(total_tokens,0), COALESCE(llm_calls,0), error "
-                        "FROM agent_runs ORDER BY started_at DESC"
-                    )).fetchall()
-                    report["runs"] = [
-                        {"id": r[0], "status": r[1], "started_at": r[2], "ended_at": r[3],
-                         "total_tokens": r[4], "llm_calls": r[5], "error": r[6]}
-                        for r in rows
-                    ]
+                    rows = await (await db.execute("SELECT id, status, started_at, ended_at, COALESCE(total_tokens,0), COALESCE(llm_calls,0), error FROM agent_runs ORDER BY started_at DESC")).fetchall()
+                    report["runs"] = [{"id": r[0], "status": r[1], "started_at": r[2], "ended_at": r[3], "total_tokens": r[4], "llm_calls": r[5], "error": r[6]} for r in rows]
                 except Exception:
                     pass
                 try:
-                    rows = await (await db.execute(
-                        "SELECT key, value FROM memory_long ORDER BY updated_at DESC"
-                    )).fetchall()
+                    rows = await (await db.execute("SELECT key, value FROM memory_long ORDER BY updated_at DESC")).fetchall()
                     for key, val in rows:
                         try:
                             report["memory"][key] = json.loads(val)
@@ -351,9 +340,7 @@ def create_app() -> FastAPI:
                 except Exception:
                     pass
                 try:
-                    rows = await (await db.execute(
-                        "SELECT event_type, data, created_at FROM memory_timeline ORDER BY created_at DESC LIMIT 200"
-                    )).fetchall()
+                    rows = await (await db.execute("SELECT event_type, data, created_at FROM memory_timeline ORDER BY created_at DESC LIMIT 200")).fetchall()
                     for r in rows:
                         try:
                             report["timeline"].append({"event": r[0], "data": json.loads(r[1] or "{}"), "at": r[2]})
@@ -377,13 +364,8 @@ def create_app() -> FastAPI:
             return {"nodes": [], "edges": []}
         async with aiosqlite.connect(db_path) as db:
             try:
-                await db.execute(
-                    "CREATE TABLE IF NOT EXISTS workflows "
-                    "(name TEXT PRIMARY KEY, graph TEXT, updated_at TEXT)"
-                )
-                row = await (await db.execute(
-                    "SELECT graph FROM workflows WHERE name = ?", (name,)
-                )).fetchone()
+                await db.execute("CREATE TABLE IF NOT EXISTS workflows (name TEXT PRIMARY KEY, graph TEXT, updated_at TEXT)")
+                row = await (await db.execute("SELECT graph FROM workflows WHERE name = ?", (name,))).fetchone()
                 return json.loads(row[0]) if row else {"nodes": [], "edges": []}
             except Exception:
                 return {"nodes": [], "edges": []}
@@ -392,16 +374,13 @@ def create_app() -> FastAPI:
     async def save_workflow(name: str, body: dict) -> dict:
         """Save a workflow graph."""
         from datetime import datetime, timezone
+
         db_path = PM.AIOS_DIR / "data" / f"{name}.db"
         db_path.parent.mkdir(parents=True, exist_ok=True)
         async with aiosqlite.connect(db_path) as db:
+            await db.execute("CREATE TABLE IF NOT EXISTS workflows (name TEXT PRIMARY KEY, graph TEXT, updated_at TEXT)")
             await db.execute(
-                "CREATE TABLE IF NOT EXISTS workflows "
-                "(name TEXT PRIMARY KEY, graph TEXT, updated_at TEXT)"
-            )
-            await db.execute(
-                "INSERT INTO workflows (name, graph, updated_at) VALUES (?, ?, ?) "
-                "ON CONFLICT(name) DO UPDATE SET graph=excluded.graph, updated_at=excluded.updated_at",
+                "INSERT INTO workflows (name, graph, updated_at) VALUES (?, ?, ?) ON CONFLICT(name) DO UPDATE SET graph=excluded.graph, updated_at=excluded.updated_at",
                 (name, json.dumps(body), datetime.now(timezone.utc).isoformat()),
             )
             await db.commit()
@@ -427,6 +406,7 @@ def create_app() -> FastAPI:
         Each message is a plain text log line (ANSI stripped).
         """
         import re
+
         _ansi = re.compile(r"\x1b\[[0-9;]*[mGKHF]")
         await websocket.accept()
         log_path = PM.log_file(name)
@@ -453,6 +433,7 @@ def create_app() -> FastAPI:
     @app.get("/api/agents/{name}/logs/stream")
     async def stream_logs(name: str) -> StreamingResponse:
         import re
+
         _ansi = re.compile(r"\x1b\[[0-9;]*[mGKHF]")
         log_path = PM.log_file(name)
 
@@ -508,19 +489,15 @@ def _workflow_to_python(workflow_name: str, nodes: list, edges: list) -> str:
         if ntype == "tool":
             prompt = node.get("prompt", f"Execute: {label}")
             tools_code.append(
-                f'    @tool\n'
-                f'    async def {safe_name}(self, input: str) -> str:\n'
+                f"    @tool\n"
+                f"    async def {safe_name}(self, input: str) -> str:\n"
                 f'        """{label}. input: The input to process."""\n'
-                f'        # TODO: implement {label}\n'
+                f"        # TODO: implement {label}\n"
                 f'        return await self.think("{prompt}: {{input}}")\n'
             )
         elif ntype == "llm":
             prompt = node.get("prompt", f"Process: {label}")
-            run_steps.append(
-                f'        # {label}\n'
-                f'        {safe_name}_result = await self.think("{prompt}")\n'
-                f'        await self.memory.save("{safe_name}", {safe_name}_result)\n'
-            )
+            run_steps.append(f'        # {label}\n        {safe_name}_result = await self.think("{prompt}")\n        await self.memory.save("{safe_name}", {safe_name}_result)\n')
         elif ntype == "memory_read":
             key = node.get("key", safe_name)
             run_steps.append(f'        {safe_name} = await self.memory.load("{key}")\n')
@@ -530,23 +507,23 @@ def _workflow_to_python(workflow_name: str, nodes: list, edges: list) -> str:
         elif ntype == "start":
             pass  # implicit
         elif ntype == "end":
-            run_steps.append(f'        # Workflow complete\n')
+            run_steps.append("        # Workflow complete\n")
 
     tool_methods = "\n".join(tools_code) if tools_code else ""
     run_body = "".join(run_steps) if run_steps else "        pass\n"
 
     return (
-        f'from aios import Agent, tool\n\n\n'
-        f'class {class_name}(Agent):\n'
+        f"from aios import Agent, tool\n\n\n"
+        f"class {class_name}(Agent):\n"
         f'    name = "{workflow_name}"\n'
         f'    model = "claude-sonnet-4-6"\n'
         f'    description = "Generated from visual workflow: {workflow_name}"\n'
         f'    system_prompt = "You are a helpful AI agent."\n\n'
-        f'{tool_methods}'
-        f'    async def run(self) -> None:\n'
-        f'{run_body}\n\n'
+        f"{tool_methods}"
+        f"    async def run(self) -> None:\n"
+        f"{run_body}\n\n"
         f'if __name__ == "__main__":\n'
-        f'    {class_name}.launch()\n'
+        f"    {class_name}.launch()\n"
     )
 
 

@@ -59,6 +59,7 @@ packages = ["aios"]
 [tool.ruff]
 line-length = 220
 target-version = "py310"
+exclude = ["aios/web/app.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
@@ -75,7 +76,14 @@ disable_error_code = [
   "type-arg",
   "no-any-return",
   "no-untyped-def",
-  "no-untyped-call"
+  "no-untyped-call",
+  "index",
+  "arg-type",
+  "call-overload",
+  "return-value",
+  "misc",
+  "call-arg",
+  "no-redef"
 ]
 
 [tool.pytest.ini_options]

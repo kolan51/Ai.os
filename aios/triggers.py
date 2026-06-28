@@ -9,6 +9,7 @@ Trigger decorators — make agents respond to external events instead of running
     async def run(self) -> None:
         ...
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -66,11 +67,13 @@ def trigger(kind: str, **kwargs: Any) -> Callable:
                 review = await self.think(f"Review this PR: {pr['title']}")
                 await self.memory.save(f"review_{pr['number']}", review)
     """
+
     def decorator(fn: Callable) -> Callable:
         setattr(fn, _TRIGGER_MARKER, True)
         setattr(fn, "__aios_trigger_kind__", kind)
         setattr(fn, "__aios_trigger_opts__", kwargs)
         return fn
+
     return decorator
 
 
@@ -108,7 +111,9 @@ class WebhookServer:
         server = await asyncio.start_server(self._handle, "0.0.0.0", self._port)
         logger.info(
             "[%s] webhook listening on http://0.0.0.0:%d%s",
-            self._agent.name, self._port, self._path,
+            self._agent.name,
+            self._port,
+            self._path,
         )
         async with server:
             await server.serve_forever()
@@ -183,6 +188,7 @@ class WebhookServer:
         await self._agent.memory.log_event("webhook_triggered", {"keys": list(payload.keys())})
         try:
             import inspect
+
             result = self._agent.run(payload)
             if inspect.isawaitable(result):
                 await result
@@ -191,20 +197,12 @@ class WebhookServer:
             logger.error("[%s] webhook run() failed: %s", self._agent.name, exc)
 
     def _verify_signature(self, body: bytes, signature: str) -> bool:
-        expected = "sha256=" + hmac.new(
-            self._secret.encode(), body, hashlib.sha256
-        ).hexdigest()
+        expected = "sha256=" + hmac.new(self._secret.encode(), body, hashlib.sha256).hexdigest()
         return hmac.compare_digest(expected, signature)
 
     @staticmethod
     async def _respond(writer: asyncio.StreamWriter, status: int, message: str) -> None:
         body = message.encode()
-        response = (
-            f"HTTP/1.1 {status} {message}\r\n"
-            f"Content-Length: {len(body)}\r\n"
-            f"Content-Type: text/plain\r\n"
-            f"Connection: close\r\n"
-            f"\r\n"
-        ).encode() + body
+        response = (f"HTTP/1.1 {status} {message}\r\nContent-Length: {len(body)}\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n").encode() + body
         writer.write(response)
         await writer.drain()

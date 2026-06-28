@@ -69,6 +69,7 @@ def tool(fn: Callable | None = None, *, retries: int = 0, backoff: float = 1.0, 
     cache_ttl: Cache results for this many seconds (0 = no cache).
                Same args → same result returned instantly within the TTL.
     """
+
     def decorator(f: Callable) -> Callable:
         schema = _build_schema(f)  # build from original signature before wrapping
         if cache_ttl > 0:
@@ -131,7 +132,11 @@ def _with_retries(fn: Callable, retries: int, backoff: float) -> Callable:
                 if attempt < retries:
                     logger.warning(
                         "tool %s attempt %d/%d failed: %s — retrying in %.1fs",
-                        fn.__name__, attempt + 1, retries + 1, exc, delay,
+                        fn.__name__,
+                        attempt + 1,
+                        retries + 1,
+                        exc,
+                        delay,
                     )
                     await asyncio.sleep(delay)
                     delay *= 2

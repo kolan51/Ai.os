@@ -23,6 +23,7 @@ for m in msgs:
 # Consumer — wait for next message (long-poll, up to timeout seconds)
 msg = await bus.wait("alerts", timeout=30, since=last_cursor)
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -31,8 +32,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
-_DEFAULT_TTL = 86_400   # 24 hours
+_DEFAULT_TTL = 86_400  # 24 hours
 
 
 class MessageBus:
@@ -46,6 +46,7 @@ class MessageBus:
 
     async def setup(self) -> None:
         import aiosqlite
+
         async with aiosqlite.connect(self._db) as db:
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS messages (
@@ -71,20 +72,17 @@ class MessageBus:
     ) -> int:
         """Publish a message to a topic. Returns the new message ID."""
         import aiosqlite
+
         now = datetime.now(timezone.utc).isoformat()
         data = json.dumps(payload, ensure_ascii=False)
         async with aiosqlite.connect(self._db) as db:
             cur = await db.execute(
-                "INSERT INTO messages (topic, sender, payload, created_at, ttl_seconds) "
-                "VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO messages (topic, sender, payload, created_at, ttl_seconds) VALUES (?, ?, ?, ?, ?)",
                 (topic, sender, data, now, ttl),
             )
             msg_id = cur.lastrowid
             # Lazy TTL cleanup
-            await db.execute(
-                "DELETE FROM messages WHERE ttl_seconds > 0 AND "
-                "CAST((julianday('now') - julianday(created_at)) * 86400 AS INTEGER) > ttl_seconds"
-            )
+            await db.execute("DELETE FROM messages WHERE ttl_seconds > 0 AND CAST((julianday('now') - julianday(created_at)) * 86400 AS INTEGER) > ttl_seconds")
             await db.commit()
         return msg_id  # type: ignore[return-value]
 
@@ -98,12 +96,14 @@ class MessageBus:
     ) -> tuple[list[dict], int]:
         """Return messages on topic with id > since. Returns (messages, new_cursor)."""
         import aiosqlite
+
         async with aiosqlite.connect(self._db) as db:
-            rows = await (await db.execute(
-                "SELECT id, topic, sender, payload, created_at FROM messages "
-                "WHERE topic = ? AND id > ? ORDER BY id ASC LIMIT ?",
-                (topic, since, limit),
-            )).fetchall()
+            rows = await (
+                await db.execute(
+                    "SELECT id, topic, sender, payload, created_at FROM messages WHERE topic = ? AND id > ? ORDER BY id ASC LIMIT ?",
+                    (topic, since, limit),
+                )
+            ).fetchall()
 
         msgs = [
             {
@@ -143,11 +143,9 @@ class MessageBus:
     async def topics(self) -> list[dict]:
         """Return all active topics with message count and latest timestamp."""
         import aiosqlite
+
         async with aiosqlite.connect(self._db) as db:
-            rows = await (await db.execute(
-                "SELECT topic, COUNT(*) as cnt, MAX(created_at) as last "
-                "FROM messages GROUP BY topic ORDER BY last DESC"
-            )).fetchall()
+            rows = await (await db.execute("SELECT topic, COUNT(*) as cnt, MAX(created_at) as last FROM messages GROUP BY topic ORDER BY last DESC")).fetchall()
         return [{"topic": r[0], "count": r[1], "last": r[2]} for r in rows]
 
     # ── Drain ────────────────────────────────────────────────────────────────
@@ -155,6 +153,7 @@ class MessageBus:
     async def drain(self, topic: str) -> int:
         """Delete all messages on a topic. Returns the count deleted."""
         import aiosqlite
+
         async with aiosqlite.connect(self._db) as db:
             cur = await db.execute("DELETE FROM messages WHERE topic = ?", (topic,))
             await db.commit()
@@ -165,16 +164,15 @@ class MessageBus:
     async def latest(self, topic: str, n: int = 20) -> list[dict]:
         """Return the n most recent messages on topic (newest last)."""
         import aiosqlite
+
         async with aiosqlite.connect(self._db) as db:
-            rows = await (await db.execute(
-                "SELECT id, topic, sender, payload, created_at FROM messages "
-                "WHERE topic = ? ORDER BY id DESC LIMIT ?",
-                (topic, n),
-            )).fetchall()
-        return [
-            {"id": r[0], "topic": r[1], "sender": r[2], "payload": _safe_json(r[3]), "created_at": r[4]}
-            for r in reversed(rows)
-        ]
+            rows = await (
+                await db.execute(
+                    "SELECT id, topic, sender, payload, created_at FROM messages WHERE topic = ? ORDER BY id DESC LIMIT ?",
+                    (topic, n),
+                )
+            ).fetchall()
+        return [{"id": r[0], "topic": r[1], "sender": r[2], "payload": _safe_json(r[3]), "created_at": r[4]} for r in reversed(rows)]
 
 
 def _safe_json(raw: str) -> Any:

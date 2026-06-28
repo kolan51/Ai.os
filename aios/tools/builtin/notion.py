@@ -35,11 +35,7 @@ class NotionMixin:
     def _notion_headers(self) -> dict[str, str]:
         token = os.environ.get("NOTION_TOKEN", "")
         if not token:
-            raise OSError(
-                "NOTION_TOKEN not set. "
-                "Create an Internal Integration at https://www.notion.so/my-integrations "
-                "and set NOTION_TOKEN=secret_..."
-            )
+            raise OSError("NOTION_TOKEN not set. Create an Internal Integration at https://www.notion.so/my-integrations and set NOTION_TOKEN=secret_...")
         return {
             "Authorization": f"Bearer {token}",
             "Notion-Version": "2022-06-28",
@@ -98,10 +94,14 @@ class NotionMixin:
         rich_text = content.get("rich_text", [])
         text = self._extract_text(rich_text)
         prefix_map = {
-            "heading_1": "# ", "heading_2": "## ", "heading_3": "### ",
-            "bulleted_list_item": "• ", "numbered_list_item": "1. ",
+            "heading_1": "# ",
+            "heading_2": "## ",
+            "heading_3": "### ",
+            "bulleted_list_item": "• ",
+            "numbered_list_item": "1. ",
             "to_do": "☐ " if not content.get("checked") else "☑ ",
-            "quote": "> ", "code": "```\n",
+            "quote": "> ",
+            "code": "```\n",
         }
         prefix = prefix_map.get(btype, "")
         suffix = "\n```" if btype == "code" else ""
@@ -142,11 +142,7 @@ class NotionMixin:
             "url": data.get("url", ""),
             "created": data.get("created_time", "")[:10],
             "last_edited": data.get("last_edited_time", "")[:10],
-            "properties": {
-                k: self._extract_text(v.get("title") or v.get("rich_text") or [])
-                for k, v in data.get("properties", {}).items()
-                if v.get("type") in ("title", "rich_text")
-            },
+            "properties": {k: self._extract_text(v.get("title") or v.get("rich_text") or []) for k, v in data.get("properties", {}).items() if v.get("type") in ("title", "rich_text")},
         }
 
     @tool
@@ -172,25 +168,20 @@ class NotionMixin:
         block_type: Block type — 'paragraph', 'heading_1', 'heading_2', 'heading_3',
                     'bulleted_list_item', 'numbered_list_item', 'to_do', 'quote', 'code'.
         """
-        valid_types = {"paragraph", "heading_1", "heading_2", "heading_3",
-                       "bulleted_list_item", "numbered_list_item", "to_do", "quote", "code"}
+        valid_types = {"paragraph", "heading_1", "heading_2", "heading_3", "bulleted_list_item", "numbered_list_item", "to_do", "quote", "code"}
         if block_type not in valid_types:
             block_type = "paragraph"
 
         block: dict[str, Any] = {
             "object": "block",
             "type": block_type,
-            block_type: {
-                "rich_text": [{"type": "text", "text": {"content": text}}]
-            },
+            block_type: {"rich_text": [{"type": "text", "text": {"content": text}}]},
         }
         await self._notion_patch(f"/blocks/{page_id}/children", {"children": [block]})
         return f"Block appended to page {page_id}"
 
     @tool
-    async def notion_create_page(
-        self, parent_id: str, title: str, content: str = "", is_database: bool = False
-    ) -> dict:
+    async def notion_create_page(self, parent_id: str, title: str, content: str = "", is_database: bool = False) -> dict:
         """
         Create a new Notion page.
         parent_id: ID of the parent page or database to create inside.
@@ -198,23 +189,17 @@ class NotionMixin:
         content: Optional initial paragraph content.
         is_database: Set to true if parent_id is a database (not a page).
         """
-        parent = (
-            {"database_id": parent_id} if is_database else {"page_id": parent_id}
-        )
+        parent = {"database_id": parent_id} if is_database else {"page_id": parent_id}
         body: dict[str, Any] = {
             "parent": parent,
-            "properties": {
-                "title": {"title": [{"type": "text", "text": {"content": title}}]}
-            },
+            "properties": {"title": {"title": [{"type": "text", "text": {"content": title}}]}},
         }
         if content:
             body["children"] = [
                 {
                     "object": "block",
                     "type": "paragraph",
-                    "paragraph": {
-                        "rich_text": [{"type": "text", "text": {"content": content}}]
-                    },
+                    "paragraph": {"rich_text": [{"type": "text", "text": {"content": content}}]},
                 }
             ]
         data = await self._notion_post("/pages", body)

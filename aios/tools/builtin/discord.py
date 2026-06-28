@@ -39,22 +39,14 @@ class DiscordMixin:
     def _discord_webhook(self) -> str:
         url = os.environ.get("DISCORD_WEBHOOK_URL", "")
         if not url:
-            raise OSError(
-                "DISCORD_WEBHOOK_URL not set. "
-                "Create a webhook: Server Settings → Integrations → Webhooks → New Webhook. "
-                "Set DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/..."
-            )
+            raise OSError("DISCORD_WEBHOOK_URL not set. Create a webhook: Server Settings → Integrations → Webhooks → New Webhook. Set DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...")
         return url
 
     @property
     def _discord_headers(self) -> dict[str, str]:
         token = os.environ.get("DISCORD_BOT_TOKEN", "")
         if not token:
-            raise OSError(
-                "DISCORD_BOT_TOKEN not set. "
-                "Create a bot at https://discord.com/developers/applications, "
-                "add it to your server, and set DISCORD_BOT_TOKEN=Bot your-token."
-            )
+            raise OSError("DISCORD_BOT_TOKEN not set. Create a bot at https://discord.com/developers/applications, add it to your server, and set DISCORD_BOT_TOKEN=Bot your-token.")
         if not token.startswith("Bot "):
             token = f"Bot {token}"
         return {"Authorization": token, "Content-Type": "application/json"}

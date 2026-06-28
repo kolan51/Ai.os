@@ -5,7 +5,6 @@ Deploy agents that remember, survive crashes, and run forever.
 
 from .agent import Agent
 from .scheduling import schedule
-from .triggers import trigger
 from .tools.builtin import (
     DiscordMixin,
     EmailMixin,
@@ -20,6 +19,7 @@ from .tools.builtin import (
     WebSearchMixin,
 )
 from .tools.registry import tool
+from .triggers import trigger
 
 __all__ = [
     "Agent",

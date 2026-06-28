@@ -49,18 +49,18 @@ class EmailMixin:
         address = os.environ.get("EMAIL_ADDRESS", "")
         password = os.environ.get("EMAIL_PASSWORD", "")
 
-        missing = [k for k, v in {
-            "EMAIL_SMTP_HOST": host,
-            "EMAIL_ADDRESS": address,
-            "EMAIL_PASSWORD": password,
-        }.items() if not v]
+        missing = [
+            k
+            for k, v in {
+                "EMAIL_SMTP_HOST": host,
+                "EMAIL_ADDRESS": address,
+                "EMAIL_PASSWORD": password,
+            }.items()
+            if not v
+        ]
 
         if missing:
-            raise OSError(
-                f"Missing email configuration: {', '.join(missing)}. "
-                "Set EMAIL_SMTP_HOST, EMAIL_SMTP_PORT (default 587), "
-                "EMAIL_ADDRESS, and EMAIL_PASSWORD in your .env file."
-            )
+            raise OSError(f"Missing email configuration: {', '.join(missing)}. Set EMAIL_SMTP_HOST, EMAIL_SMTP_PORT (default 587), EMAIL_ADDRESS, and EMAIL_PASSWORD in your .env file.")
 
         try:
             port = int(port_str)
@@ -90,9 +90,7 @@ class EmailMixin:
         """
         import asyncio
 
-        return await asyncio.get_event_loop().run_in_executor(
-            None, self._send_smtp, to, subject, body, html, cc, reply_to
-        )
+        return await asyncio.get_event_loop().run_in_executor(None, self._send_smtp, to, subject, body, html, cc, reply_to)
 
     def _send_smtp(
         self,

@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
 # ── Scheduled template ────────────────────────────────────────────────────────
 
-SCHEDULED_TEMPLATE = '''\
+SCHEDULED_TEMPLATE = """\
 from aios import Agent, schedule, tool
 
 
@@ -65,7 +65,7 @@ class {class_name}(Agent):
 
 if __name__ == "__main__":
     {class_name}.launch()
-'''
+"""
 
 # ── Research template ─────────────────────────────────────────────────────────
 
@@ -247,9 +247,9 @@ if __name__ == "__main__":
 '''
 
 TEMPLATES: dict[str, tuple[str, str]] = {
-    "basic":     (AGENT_TEMPLATE,    "Simple agent with a custom @tool and memory"),
-    "scheduled": (SCHEDULED_TEMPLATE,"Agent that runs on a schedule (e.g. every 1h)"),
-    "research":  (RESEARCH_TEMPLATE, "Web researcher with persistent knowledge base"),
-    "notifier":  (NOTIFIER_TEMPLATE, "Slack-alerting monitor with @schedule"),
-    "webhook":   (WEBHOOK_TEMPLATE,  "Webhook-triggered agent — responds to HTTP POST events"),
+    "basic": (AGENT_TEMPLATE, "Simple agent with a custom @tool and memory"),
+    "scheduled": (SCHEDULED_TEMPLATE, "Agent that runs on a schedule (e.g. every 1h)"),
+    "research": (RESEARCH_TEMPLATE, "Web researcher with persistent knowledge base"),
+    "notifier": (NOTIFIER_TEMPLATE, "Slack-alerting monitor with @schedule"),
+    "webhook": (WEBHOOK_TEMPLATE, "Webhook-triggered agent — responds to HTTP POST events"),
 }

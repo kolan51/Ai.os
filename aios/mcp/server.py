@@ -9,6 +9,7 @@ Protocol implemented: MCP 2024-11-05 (JSON-RPC 2.0 over SSE or stdio).
 No extra dependencies required for stdio mode.
 HTTP mode requires `fastapi` and `uvicorn` (already a runtime dependency).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -21,8 +22,8 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-
 # ── Agent loader ──────────────────────────────────────────────────────────────
+
 
 def _load_agent_class(agent_file: Path):
     """Import the agent file and return the first Agent subclass found."""
@@ -35,16 +36,13 @@ def _load_agent_class(agent_file: Path):
     spec.loader.exec_module(mod)  # type: ignore[union-attr]
 
     for obj in vars(mod).values():
-        if (
-            inspect.isclass(obj)
-            and issubclass(obj, Agent)
-            and obj is not Agent
-        ):
+        if inspect.isclass(obj) and issubclass(obj, Agent) and obj is not Agent:
             return obj
     raise ImportError(f"No Agent subclass found in {agent_file}")
 
 
 # ── MCP message builders ───────────────────────────────────────────────────────
+
 
 def _ok(req_id: Any, result: Any) -> dict:
     return {"jsonrpc": "2.0", "id": req_id, "result": result}
@@ -95,6 +93,7 @@ def _tool_schema(tool_name: str, tool_description: str, agent_class) -> dict:
 
 # ── Agent invocation ──────────────────────────────────────────────────────────
 
+
 async def _invoke_agent(agent_class, arguments: dict) -> str:
     """Create a fresh agent instance, bootstrap it, call run(), return result."""
     agent = agent_class.__new__(agent_class)
@@ -122,6 +121,7 @@ async def _invoke_agent(agent_class, arguments: dict) -> str:
 
 
 # ── stdio transport ───────────────────────────────────────────────────────────
+
 
 async def _stdio_loop(agent_class, tool_name: str, tool_description: str) -> None:
     """Speak MCP over stdin/stdout."""
@@ -152,11 +152,16 @@ async def _stdio_loop(agent_class, tool_name: str, tool_description: str) -> Non
         req_id = msg.get("id")
 
         if method == "initialize":
-            _write(_ok(req_id, {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {"tools": {}},
-                "serverInfo": {"name": "aios-mcp", "version": "0.1.0"},
-            }))
+            _write(
+                _ok(
+                    req_id,
+                    {
+                        "protocolVersion": "2024-11-05",
+                        "capabilities": {"tools": {}},
+                        "serverInfo": {"name": "aios-mcp", "version": "0.1.0"},
+                    },
+                )
+            )
 
         elif method == "tools/list":
             _write(_ok(req_id, {"tools": [tool_entry]}))
@@ -168,15 +173,25 @@ async def _stdio_loop(agent_class, tool_name: str, tool_description: str) -> Non
                 continue
             try:
                 output = await _invoke_agent(agent_class, params.get("arguments", {}))
-                _write(_ok(req_id, {
-                    "content": [{"type": "text", "text": output}],
-                    "isError": False,
-                }))
+                _write(
+                    _ok(
+                        req_id,
+                        {
+                            "content": [{"type": "text", "text": output}],
+                            "isError": False,
+                        },
+                    )
+                )
             except Exception as exc:
-                _write(_ok(req_id, {
-                    "content": [{"type": "text", "text": f"Error: {exc}\n{traceback.format_exc()}"}],
-                    "isError": True,
-                }))
+                _write(
+                    _ok(
+                        req_id,
+                        {
+                            "content": [{"type": "text", "text": f"Error: {exc}\n{traceback.format_exc()}"}],
+                            "isError": True,
+                        },
+                    )
+                )
 
         elif method == "notifications/initialized":
             pass  # client ack, no response needed
@@ -186,6 +201,7 @@ async def _stdio_loop(agent_class, tool_name: str, tool_description: str) -> Non
 
 
 # ── HTTP/SSE transport ────────────────────────────────────────────────────────
+
 
 async def _sse_server(agent_class, tool_name: str, tool_description: str, port: int) -> None:
     """Serve MCP over HTTP with Server-Sent Events."""
@@ -223,8 +239,7 @@ async def _sse_server(agent_class, tool_name: str, tool_description: str, port: 
             finally:
                 _sessions.pop(session_id, None)
 
-        return StreamingResponse(event_stream(), media_type="text/event-stream",
-                                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+        return StreamingResponse(event_stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
     @mcp_app.post("/messages")
     async def messages_endpoint(request: Request, sessionId: str = ""):
@@ -246,11 +261,16 @@ async def _sse_server(agent_class, tool_name: str, tool_description: str, port: 
                 await q.put(obj)
 
         if method == "initialize":
-            await _respond(_ok(req_id, {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {"tools": {}},
-                "serverInfo": {"name": "aios-mcp", "version": "0.1.0"},
-            }))
+            await _respond(
+                _ok(
+                    req_id,
+                    {
+                        "protocolVersion": "2024-11-05",
+                        "capabilities": {"tools": {}},
+                        "serverInfo": {"name": "aios-mcp", "version": "0.1.0"},
+                    },
+                )
+            )
         elif method == "tools/list":
             await _respond(_ok(req_id, {"tools": [tool_entry]}))
         elif method == "tools/call":
@@ -262,15 +282,26 @@ async def _sse_server(agent_class, tool_name: str, tool_description: str, port: 
                 async def _run():
                     try:
                         output = await _invoke_agent(agent_class, params.get("arguments", {}))
-                        await _respond(_ok(req_id, {
-                            "content": [{"type": "text", "text": output}],
-                            "isError": False,
-                        }))
+                        await _respond(
+                            _ok(
+                                req_id,
+                                {
+                                    "content": [{"type": "text", "text": output}],
+                                    "isError": False,
+                                },
+                            )
+                        )
                     except Exception as exc:
-                        await _respond(_ok(req_id, {
-                            "content": [{"type": "text", "text": f"Error: {exc}"}],
-                            "isError": True,
-                        }))
+                        await _respond(
+                            _ok(
+                                req_id,
+                                {
+                                    "content": [{"type": "text", "text": f"Error: {exc}"}],
+                                    "isError": True,
+                                },
+                            )
+                        )
+
                 asyncio.create_task(_run())
         elif method == "notifications/initialized":
             pass
@@ -285,6 +316,7 @@ async def _sse_server(agent_class, tool_name: str, tool_description: str, port: 
 
 
 # ── Public entry point ────────────────────────────────────────────────────────
+
 
 async def run_mcp_server(
     agent_file: Path,
