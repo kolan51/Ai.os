@@ -7,8 +7,7 @@ from pathlib import Path
 import aiosqlite
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse
-
+from fastapi.responses import HTMLResponse, Response, StreamingResponse
 from ..runtime.process import ProcessManager as PM
 
 
@@ -16,6 +15,14 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Ai.os", docs_url=None, redoc_url=None)
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon() -> Response:
+        svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+        <rect width="64" height="64" rx="14" fill="#08090F"/>
+        <text x="32" y="41" text-anchor="middle" font-size="28" font-family="Arial" font-weight="800" fill="#5B8DF6">A</text>
+        </svg>"""
+        return Response(content=svg, media_type="image/svg+xml")
+      
     @app.get("/", response_class=HTMLResponse)
     async def dashboard() -> str:
         return _DASHBOARD_HTML
@@ -121,6 +128,7 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ai.os</title>
+<link rel="icon" href="/favicon.ico" type="image/svg+xml">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{

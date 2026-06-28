@@ -1,5 +1,5 @@
-"""
-Research Agent — persistent knowledge builder using built-in tool mixins.
+﻿"""
+Research Agent â€” persistent knowledge builder using built-in tool mixins.
 
 Demonstrates:
 - WebSearchMixin for web search and URL fetching
@@ -49,7 +49,7 @@ class ResearchAgent(Agent, WebSearchMixin, FilesystemMixin):
 
     async def run(self) -> None:
         print(f"\n[{self.name}] starting research session")
-        print(f"[{self.name}] agent id: {self.identity.short_id} · model: {self.model}\n")
+        print(f"[{self.name}] agent id: {self.identity.short_id} Â- model: {self.model}\n")
 
         researched = []
         skipped = []
@@ -58,12 +58,12 @@ class ResearchAgent(Agent, WebSearchMixin, FilesystemMixin):
             existing = await self.memory.load(f"finding:{topic}")
             if existing:
                 skipped.append(topic)
-                print(f"  ✓ already know: {topic[:60]}")
+                print(f"  âœ“ already know: {topic[:60]}")
                 continue
 
-            print(f"  → researching: {topic}")
+            print(f"Researching: {topic}")
 
-            # Agentic loop — LLM decides when to search, what to fetch, when to save
+            # Agentic loop â€” LLM decides when to search, what to fetch, when to save
             await self.think_with_tools(
                 f"Research this topic thoroughly:\n\nTOPIC: {topic}\n\n"
                 "Steps:\n"
@@ -76,7 +76,7 @@ class ResearchAgent(Agent, WebSearchMixin, FilesystemMixin):
             )
 
             researched.append(topic)
-            print(f"  ✓ done: {topic[:60]}\n")
+            print(f"  âœ“ done: {topic[:60]}\n")
 
         # Write a consolidated report to disk
         all_findings = await self.memory.all()

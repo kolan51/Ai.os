@@ -52,16 +52,37 @@ def stop(agent_name: str) -> bool:
     return True
 
 
-def is_running(agent_name: str) -> bool:
-    pf = pid_file(agent_name)
-    if not pf.exists():
+def is_running(name: str) -> bool:
+    info = get_info(name)
+    if not info:
         return False
-    info = json.loads(pf.read_text())
+
+    pid = info.get("pid")
+    if not pid:
+        return False
+
     try:
-        os.kill(info["pid"], 0)
+        pid = int(pid)
+    except (TypeError, ValueError):
+        return False
+
+    if os.name == "nt":
+        try:
+            result = subprocess.run(
+                ["tasklist", "/FI", f"PID eq {pid}"],
+                capture_output=True,
+                text=True,
+                timeout=3,
+                check=False,
+            )
+            return str(pid) in result.stdout
+        except Exception:
+            return False
+
+    try:
+        os.kill(pid, 0)
         return True
-    except (ProcessLookupError, PermissionError):
-        pf.unlink(missing_ok=True)
+    except OSError:
         return False
 
 
