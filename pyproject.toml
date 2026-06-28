@@ -49,9 +49,12 @@ dev = [
 aios = "aios.cli.main:app"
 
 [project.urls]
+Documentation = "https://github.com/kolan51/Ai.os#readme"
 Homepage = "https://github.com/kolan51/Ai.os"
 Repository = "https://github.com/kolan51/Ai.os"
 Issues = "https://github.com/kolan51/Ai.os/issues"
+Source = "https://github.com/kolan51/Ai.os"
+Changelog = "https://github.com/kolan51/Ai.os/releases"
 
 [tool.hatch.build.targets.wheel]
 packages = ["aios"]
