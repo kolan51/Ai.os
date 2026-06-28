@@ -8,6 +8,7 @@ import aiosqlite
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, Response, StreamingResponse
+
 from ..runtime.process import ProcessManager as PM
 
 
@@ -22,7 +23,7 @@ def create_app() -> FastAPI:
         <text x="32" y="41" text-anchor="middle" font-size="28" font-family="Arial" font-weight="800" fill="#5B8DF6">A</text>
         </svg>"""
         return Response(content=svg, media_type="image/svg+xml")
-      
+
     @app.get("/", response_class=HTMLResponse)
     async def dashboard() -> str:
         return _DASHBOARD_HTML
