@@ -1,7 +1,6 @@
 # Ai.os
 
-[![CI](https://github.com/aios-runtime/aios/actions/workflows/ci.yml/badge.svg)](https://github.com/aios-runtime/aios/actions)
-[![PyPI](https://img.shields.io/pypi/v/aios-runtime)](https://pypi.org/project/aios-runtime/)
+[![CI](https://github.com/kolan51/Ai.os/actions/workflows/ci.yml/badge.svg)](https://github.com/kolan51/Ai.os/actions)
 [![Python](https://img.shields.io/pypi/pyversions/aios-runtime)](https://pypi.org/project/aios-runtime/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -41,14 +40,14 @@ aios ui                           # open web dashboard
 
 Every agent framework makes you solve the same problems from scratch:
 
-| Problem | Without Ai.os | With Ai.os |
-|---|---|---|
-| Agent crashes | Loses all context | Resumes from last tool call |
-| Cross-run memory | DIY SQLite / Redis | `await self.memory.save("key", value)` |
-| Swap models | Rewrite your code | Change one line: `model = "gpt-4o"` |
-| Inspect running agents | Print statements | Web UI + `aios logs -f` |
-| Recurring tasks | Cron job + state file | `@schedule("every 6h")` |
-| Agent calls agent | Manual subprocess | `await self.call_agent(ResearchAgent, ...)` |
+| Problem                | Without Ai.os         | With Ai.os                                  |
+| ---------------------- | --------------------- | ------------------------------------------- |
+| Agent crashes          | Loses all context     | Resumes from last tool call                 |
+| Cross-run memory       | DIY SQLite / Redis    | `await self.memory.save("key", value)`      |
+| Swap models            | Rewrite your code     | Change one line: `model = "gpt-4o"`         |
+| Inspect running agents | Print statements      | Web UI + `aios logs -f`                     |
+| Recurring tasks        | Cron job + state file | `@schedule("every 6h")`                     |
+| Agent calls agent      | Manual subprocess     | `await self.call_agent(ResearchAgent, ...)` |
 
 ---
 
@@ -194,22 +193,22 @@ Powered by [litellm](https://github.com/BerriAI/litellm) — any OpenAI-compatib
 
 ## CLI reference
 
-| Command | Description |
-|---|---|
-| `aios init [name]` | Scaffold a new agent project |
-| `aios run agent.py` | Run in foreground |
-| `aios run agent.py -d` | Run in background |
-| `aios run agent.py -w` | Run, restart on file change |
-| `aios list` | List all agents |
-| `aios status <name>` | Show status + run history |
-| `aios logs <name>` | Show recent logs |
-| `aios logs <name> -f` | Stream logs live |
-| `aios stop <name>` | Stop agent |
-| `aios restart <name>` | Restart (resumes from checkpoint) |
-| `aios memory <name>` | Inspect long-term memory |
-| `aios memory <name> -k key` | Show one memory key in full |
-| `aios ui` | Open web dashboard |
-| `aios version` | Show version |
+| Command                     | Description                       |
+| --------------------------- | --------------------------------- |
+| `aios init [name]`          | Scaffold a new agent project      |
+| `aios run agent.py`         | Run in foreground                 |
+| `aios run agent.py -d`      | Run in background                 |
+| `aios run agent.py -w`      | Run, restart on file change       |
+| `aios list`                 | List all agents                   |
+| `aios status <name>`        | Show status + run history         |
+| `aios logs <name>`          | Show recent logs                  |
+| `aios logs <name> -f`       | Stream logs live                  |
+| `aios stop <name>`          | Stop agent                        |
+| `aios restart <name>`       | Restart (resumes from checkpoint) |
+| `aios memory <name>`        | Inspect long-term memory          |
+| `aios memory <name> -k key` | Show one memory key in full       |
+| `aios ui`                   | Open web dashboard                |
+| `aios version`              | Show version                      |
 
 ---
 
@@ -234,27 +233,27 @@ Ai.os auto-loads `.env` on `Agent.launch()`. Local Ollama needs no key.
 
 ## Examples
 
-| File | What it shows |
-|---|---|
+| File                                               | What it shows                                           |
+| -------------------------------------------------- | ------------------------------------------------------- |
 | [`examples/researcher.py`](examples/researcher.py) | Web research, persistent knowledge base, crash recovery |
-| [`examples/monitor.py`](examples/monitor.py) | URL monitoring, uptime history, scheduling |
-| [`examples/coder.py`](examples/coder.py) | Write code, run tests, iterate until passing |
+| [`examples/monitor.py`](examples/monitor.py)       | URL monitoring, uptime history, scheduling              |
+| [`examples/coder.py`](examples/coder.py)           | Write code, run tests, iterate until passing            |
 
 ---
 
 ## vs. alternatives
 
-| | Ai.os | LangGraph | CrewAI | Temporal |
-|---|---|---|---|---|
-| Crash recovery | ✅ automatic | ❌ manual | ❌ | ✅ but complex |
-| Persistent memory | ✅ built-in | ❌ DIY | ❌ DIY | ❌ DIY |
-| Zero-config start | ✅ | ❌ | ✅ | ❌ |
-| Web UI | ✅ | ❌ | ❌ | ✅ |
-| Multi-model | ✅ | ✅ | ✅ | ❌ |
-| Scheduling | ✅ `@schedule` | ❌ | ❌ | ✅ |
-| Agent-to-agent | ✅ | ✅ | ✅ | ❌ |
-| Local LLMs | ✅ Ollama | ✅ | ✅ | ❌ |
-| Learning curve | Low | High | Low | High |
+|                   | Ai.os          | LangGraph | CrewAI | Temporal       |
+| ----------------- | -------------- | --------- | ------ | -------------- |
+| Crash recovery    | ✅ automatic   | ❌ manual | ❌     | ✅ but complex |
+| Persistent memory | ✅ built-in    | ❌ DIY    | ❌ DIY | ❌ DIY         |
+| Zero-config start | ✅             | ❌        | ✅     | ❌             |
+| Web UI            | ✅             | ❌        | ❌     | ✅             |
+| Multi-model       | ✅             | ✅        | ✅     | ❌             |
+| Scheduling        | ✅ `@schedule` | ❌        | ❌     | ✅             |
+| Agent-to-agent    | ✅             | ✅        | ✅     | ❌             |
+| Local LLMs        | ✅ Ollama      | ✅        | ✅     | ❌             |
+| Learning curve    | Low            | High      | Low    | High           |
 
 ---
 
