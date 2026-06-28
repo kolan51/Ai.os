@@ -1,7 +1,7 @@
 # Ai.os
 
 [![CI](https://github.com/kolan51/Ai.os/actions/workflows/ci.yml/badge.svg)](https://github.com/kolan51/Ai.os/actions)
-[![Python](https://img.shields.io/pypi/pyversions/aios-runtime)](https://pypi.org/project/aios-runtime/)
+[![PyPI](https://img.shields.io/pypi/v/aios-runtime)](https://pypi.org/project/aios-runtime/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Persistent agent runtime. Deploy agents that remember, survive crashes, and run forever.**
