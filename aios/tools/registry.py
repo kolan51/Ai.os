@@ -50,11 +50,96 @@ def _build_schema(fn: Callable) -> dict:
     }
 
 
-def tool(fn: Callable) -> Callable:
-    """Mark a method as an agent tool. Schema is inferred from type hints."""
-    setattr(fn, _TOOL_MARKER, True)
-    setattr(fn, "__aios_schema__", _build_schema(fn))
-    return fn
+def tool(fn: Callable | None = None, *, retries: int = 0, backoff: float = 1.0, cache_ttl: float = 0.0) -> Any:
+    """Mark a method as an agent tool.
+
+    Can be used as a plain decorator or with keyword arguments::
+
+        @tool
+        async def my_tool(self, x: str) -> str: ...
+
+        @tool(retries=3, backoff=2.0)
+        async def my_tool(self, x: str) -> str: ...
+
+        @tool(cache_ttl=60)
+        async def fetch_data(self, url: str) -> str: ...
+
+    retries:   How many times to retry on exception (0 = no retries).
+    backoff:   Seconds to wait between retries (doubles each attempt).
+    cache_ttl: Cache results for this many seconds (0 = no cache).
+               Same args → same result returned instantly within the TTL.
+    """
+    def decorator(f: Callable) -> Callable:
+        schema = _build_schema(f)  # build from original signature before wrapping
+        if cache_ttl > 0:
+            f = _with_cache(f, cache_ttl)
+        if retries > 0:
+            f = _with_retries(f, retries, backoff)
+        setattr(f, _TOOL_MARKER, True)
+        setattr(f, "__aios_schema__", schema)
+        setattr(f, "__aios_retries__", retries)
+        setattr(f, "__aios_cache_ttl__", cache_ttl)
+        return f
+
+    if fn is not None:
+        # Called as @tool (no parentheses)
+        return decorator(fn)
+    # Called as @tool(...) — return decorator
+    return decorator
+
+
+def _with_cache(fn: Callable, ttl: float) -> Callable:
+    import time
+
+    _cache: dict[str, tuple[float, Any]] = {}  # key → (expires_at, result)
+
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        cache_key = json.dumps({"a": args[1:], "k": kwargs}, sort_keys=True, default=str)
+        now = time.monotonic()
+        if cache_key in _cache:
+            expires, cached_result = _cache[cache_key]
+            if now < expires:
+                return cached_result
+        result = fn(*args, **kwargs)
+        if inspect.isawaitable(result):
+            result = await result
+        _cache[cache_key] = (now + ttl, result)
+        return result
+
+    wrapper.__name__ = fn.__name__
+    wrapper.__doc__ = fn.__doc__
+    return wrapper
+
+
+def _with_retries(fn: Callable, retries: int, backoff: float) -> Callable:
+    import asyncio
+    import logging
+
+    logger = logging.getLogger("aios")
+
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        last_exc: Exception | None = None
+        delay = backoff
+        for attempt in range(retries + 1):
+            try:
+                result = fn(*args, **kwargs)
+                if inspect.isawaitable(result):
+                    result = await result
+                return result
+            except Exception as exc:
+                last_exc = exc
+                if attempt < retries:
+                    logger.warning(
+                        "tool %s attempt %d/%d failed: %s — retrying in %.1fs",
+                        fn.__name__, attempt + 1, retries + 1, exc, delay,
+                    )
+                    await asyncio.sleep(delay)
+                    delay *= 2
+        raise last_exc  # type: ignore[misc]
+
+    wrapper.__name__ = fn.__name__
+    wrapper.__doc__ = fn.__doc__
+    return wrapper
 
 
 @dataclass

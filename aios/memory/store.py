@@ -105,6 +105,24 @@ class MemoryStore:
             ).fetchall()
             return {r[0]: json.loads(r[1]) for r in rows}
 
+    async def search(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
+        """Return memory entries whose key or serialised value contains `query` (case-insensitive).
+
+        Returns a list of ``{"key": ..., "value": ..., "updated_at": ...}`` dicts,
+        ordered by most-recently-updated first.
+        """
+        pattern = f"%{query}%"
+        async with aiosqlite.connect(self._db_path) as db:
+            rows = await (
+                await db.execute(
+                    "SELECT key, value, updated_at FROM memory_long "
+                    "WHERE agent_id = ? AND (key LIKE ? OR value LIKE ?) "
+                    "ORDER BY updated_at DESC LIMIT ?",
+                    (self._agent_id, pattern, pattern, limit),
+                )
+            ).fetchall()
+            return [{"key": r[0], "value": json.loads(r[1]), "updated_at": r[2]} for r in rows]
+
     # ── Timeline (append-only event log) ────────────────────────────────────
 
     async def log_event(self, event: str, data: dict | None = None) -> None:

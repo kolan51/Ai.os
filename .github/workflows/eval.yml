@@ -1,0 +1,69 @@
+name: Agent Evals
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "examples/**"
+      - "**/*.eval.yaml"
+  pull_request:
+    paths:
+      - "examples/**"
+      - "**/*.eval.yaml"
+  workflow_dispatch:        # manual trigger from GitHub UI
+
+jobs:
+  eval:
+    name: Run agent evals
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install aios-runtime + eval deps
+        run: |
+          pip install -e ".[dev]"
+          pip install pyyaml
+
+      - name: Find eval suites
+        id: find
+        run: |
+          suites=$(find . -name "*.eval.yaml" -not -path "./.git/*" | head -20)
+          echo "Found suites:"
+          echo "$suites"
+          echo "count=$(echo "$suites" | grep -c '.yaml' || echo 0)" >> $GITHUB_OUTPUT
+
+      - name: Run evals
+        if: steps.find.outputs.count != '0'
+        run: |
+          mkdir -p eval-results
+          for suite in $(find . -name "*.eval.yaml" -not -path "./.git/*"); do
+            agent="${suite%.eval.yaml}.py"
+            name=$(basename "$suite" .eval.yaml)
+            if [ -f "$agent" ]; then
+              echo "::group::eval $name"
+              aios eval "$agent" \
+                --suite "$suite" \
+                --junit "eval-results/${name}.xml" \
+                || true
+              echo "::endgroup::"
+            else
+              echo "::warning::No matching agent file for $suite (expected $agent)"
+            fi
+          done
+
+      - name: Publish eval results
+        uses: mikepenz/action-junit-report@v4
+        if: always() && steps.find.outputs.count != '0'
+        with:
+          report_paths: "eval-results/*.xml"
+          check_name: "Agent Eval Results"
+          fail_on_failure: true
+          require_tests: false
+          detailed_summary: true
+          token: ${{ secrets.GITHUB_TOKEN }}

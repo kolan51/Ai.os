@@ -48,9 +48,24 @@ class CheckpointEngine:
                     status TEXT NOT NULL DEFAULT 'running',
                     started_at TEXT NOT NULL,
                     ended_at TEXT,
-                    error TEXT
+                    error TEXT,
+                    prompt_tokens INTEGER DEFAULT 0,
+                    completion_tokens INTEGER DEFAULT 0,
+                    total_tokens INTEGER DEFAULT 0,
+                    llm_calls INTEGER DEFAULT 0
                 )
             """)
+            # Migration: add columns to existing DBs that predate this schema
+            for col, typ in [
+                ("prompt_tokens", "INTEGER DEFAULT 0"),
+                ("completion_tokens", "INTEGER DEFAULT 0"),
+                ("total_tokens", "INTEGER DEFAULT 0"),
+                ("llm_calls", "INTEGER DEFAULT 0"),
+            ]:
+                try:
+                    await db.execute(f"ALTER TABLE agent_runs ADD COLUMN {col} {typ}")
+                except Exception:
+                    pass  # column already exists
             await db.execute("CREATE INDEX IF NOT EXISTS idx_cp_lookup ON checkpoints(agent_id, run_id, tool_name, args_hash)")
             await db.commit()
 
@@ -83,6 +98,20 @@ class CheckpointEngine:
             await db.execute(
                 "UPDATE agent_runs SET status = ?, ended_at = ?, error = ? WHERE id = ?",
                 (status, datetime.utcnow().isoformat(), error, self._run_id),
+            )
+            await db.commit()
+
+    async def record_llm_usage(self, prompt_tokens: int, completion_tokens: int) -> None:
+        """Accumulate token usage for the current run."""
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                """UPDATE agent_runs
+                   SET prompt_tokens     = prompt_tokens     + ?,
+                       completion_tokens = completion_tokens + ?,
+                       total_tokens      = total_tokens      + ?,
+                       llm_calls         = llm_calls         + 1
+                   WHERE id = ?""",
+                (prompt_tokens, completion_tokens, prompt_tokens + completion_tokens, self._run_id),
             )
             await db.commit()
 
